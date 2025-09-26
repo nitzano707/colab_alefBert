@@ -298,213 +298,308 @@ class SeedSentenceAnalyzer:
 # ------------------------------------------------------------
 def create_analysis_form(colab_notebook_link: str = "https://colab.research.google.com/"):
     """
-    מציג טופס ניתוח היגדים באמצעות HTML טהור. colab_notebook_link – ייכתב בשורת ההסבר באקסל.
+    מציג טופס ניתוח היגדים. colab_notebook_link – ייכתב בשורת ההסבר באקסל.
     """
     
-    form_html = HTML(f"""
-    <div id="analysis-form" style="font-family: {_font_family}, sans-serif; direction: rtl; text-align: right; max-width: 1000px;">
-        
-        <!-- הוראות -->
-        <div style="background: linear-gradient(135deg, #e3f2fd 0%, #f1f8e9 100%); 
-                    border: 1px solid #81c784; border-radius: 8px; padding: 15px; margin: 15px 0;">
-            <h3 style="margin-top: 0;">הוראות להכנת קובץ CSV</h3>
-            <ol style="margin: 0;">
-                <li>צור/י קובץ עם עמודה בשם <code>sentence</code>.</li>
-                <li>כל שורה מכילה היגד אחד.</li>
-                <li>שמור/שמרי את הקובץ בקידוד UTF-8.</li>
-            </ol>
-        </div>
-        
-        <!-- היגד הזרע -->
-        <div style="margin: 20px 0;">
-            <label for="seed-text" style="display: block; font-weight: bold; margin-bottom: 5px;">היגד הזרע:</label>
-            <textarea id="seed-text" placeholder="הכנס/י כאן את היגד הזרע…" 
-                     style="width: 100%; height: 80px; padding: 10px; border: 1px solid #ccc; 
-                            border-radius: 4px; font-family: {_font_family}, sans-serif; 
-                            direction: rtl; text-align: right; resize: vertical;"></textarea>
-        </div>
-        
-        <!-- העלאת קובץ -->
-        <div style="margin: 20px 0;">
-            <label for="file-upload" style="display: block; font-weight: bold; margin-bottom: 5px;">צירוף קובץ CSV:</label>
-            <input type="file" id="file-upload" accept=".csv" 
-                   style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-            <div id="file-status" style="margin-top: 5px; font-size: 12px; color: #666;"></div>
-        </div>
-        
-        <!-- עמודת טקסט -->
-        <div style="margin: 20px 0;">
-            <label for="column-name" style="display: block; font-weight: bold; margin-bottom: 5px;">עמודת טקסט:</label>
-            <input type="text" id="column-name" value="sentence" 
-                   style="width: 300px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; 
-                          font-family: {_font_family}, sans-serif; direction: rtl; text-align: right;">
-        </div>
-        
-        <!-- היגדים חזקים -->
-        <div style="margin: 20px 0;">
-            <label for="num-strong" style="display: block; font-weight: bold; margin-bottom: 5px;">
-                היגדים חזקים (≥0.75): <span id="strong-value">5</span>
-            </label>
-            <input type="range" id="num-strong" min="0" max="50" value="5" 
-                   style="width: 80%; margin-top: 5px;">
-        </div>
-        
-        <!-- היגדים בינוניים -->
-        <div style="margin: 20px 0;">
-            <label for="num-medium" style="display: block; font-weight: bold; margin-bottom: 5px;">
-                היגדים בינוניים (0.70–0.749): <span id="medium-value">5</span>
-            </label>
-            <input type="range" id="num-medium" min="0" max="50" value="5" 
-                   style="width: 80%; margin-top: 5px;">
-        </div>
-        
-        <!-- כפתורים -->
-        <div style="margin: 20px 0;">
-            <button id="analyze-btn" onclick="runAnalysis()" 
-                    style="background: #4caf50; color: white; border: none; padding: 12px 24px; 
-                           border-radius: 4px; font-family: {_font_family}, sans-serif; 
-                           font-size: 16px; cursor: pointer; margin-left: 10px;">
-                בצע ניתוח
-            </button>
-            <button id="export-btn" onclick="exportExcel()" disabled
-                    style="background: #2196f3; color: white; border: none; padding: 12px 24px; 
-                           border-radius: 4px; font-family: {_font_family}, sans-serif; 
-                           font-size: 16px; cursor: pointer;">
-                ייצוא לאקסל
-            </button>
-        </div>
-        
-        <!-- אזור סטטוס -->
-        <div id="status-area" style="margin: 15px 0; padding: 10px; background: #f5f5f5; 
-                                    border-radius: 4px; min-height: 20px; display: none;"></div>
-    </div>
+    # JavaScript אגרסיבי שמזיז התוויות לצד ימין
+    rtl_script = HTML(f"""
+    <style>
+    /* CSS בסיסי ל-RTL */
+    .widget-text, .widget-textarea, .widget-upload, .widget-hslider {{
+        display: flex !important;
+        flex-direction: row-reverse !important;
+        align-items: center !important;
+    }}
+    
+    .widget-text .widget-label, 
+    .widget-textarea .widget-label,
+    .widget-upload .widget-label,
+    .widget-hslider .widget-label {{
+        text-align: right !important;
+        direction: rtl !important;
+        padding-left: 15px !important;
+        padding-right: 0px !important;
+        font-family: {_font_family}, sans-serif !important;
+        min-width: 200px !important;
+        max-width: 250px !important;
+        flex-shrink: 0 !important;
+    }}
+    
+    .widget-text input, .widget-textarea textarea {{
+        direction: rtl !important;
+        text-align: right !important;
+        font-family: {_font_family}, sans-serif !important;
+        flex-grow: 1 !important;
+    }}
+    
+    .widget-html {{
+        direction: rtl !important;
+        text-align: right !important;
+        font-family: {_font_family}, sans-serif !important;
+    }}
+    </style>
     
     <script>
-        // משתנים גלובליים
-        let currentAnalyzer = null;
-        let uploadedFile = null;
+    function forceRTLLayout() {{
+        // חיפוש כל ה-widgets
+        const widgets = document.querySelectorAll('.widget-text, .widget-textarea, .widget-upload, .widget-hslider');
         
-        // עדכון ערכי סליידרים
-        document.getElementById('num-strong').addEventListener('input', function() {
-            document.getElementById('strong-value').textContent = this.value;
-        });
+        widgets.forEach(widget => {{
+            // הפיכת כיוון ה-flex
+            widget.style.display = 'flex';
+            widget.style.flexDirection = 'row-reverse';
+            widget.style.alignItems = 'center';
+            
+            // מציאת ה-label והתאמתו
+            const label = widget.querySelector('.widget-label');
+            if (label && /[א-ת]/.test(label.textContent)) {{
+                label.style.textAlign = 'right';
+                label.style.direction = 'rtl';
+                label.style.paddingLeft = '15px';
+                label.style.paddingRight = '0px';
+                label.style.fontFamily = '{_font_family}, sans-serif';
+                label.style.minWidth = '200px';
+                label.style.maxWidth = '250px';
+                label.style.flexShrink = '0';
+            }}
+            
+            // התאמת input/textarea
+            const input = widget.querySelector('input, textarea');
+            if (input) {{
+                input.style.direction = 'rtl';
+                input.style.textAlign = 'right';
+                input.style.fontFamily = '{_font_family}, sans-serif';
+                input.style.flexGrow = '1';
+            }}
+        }});
         
-        document.getElementById('num-medium').addEventListener('input', function() {
-            document.getElementById('medium-value').textContent = this.value;
-        });
-        
-        // טיפול בהעלאת קובץ
-        document.getElementById('file-upload').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            const statusDiv = document.getElementById('file-status');
-            
-            if (file) {
-                if (file.name.endsWith('.csv')) {
-                    uploadedFile = file;
-                    statusDiv.textContent = `נבחר: ${{file.name}} (${{(file.size/1024).toFixed(1)}} KB)`;
-                    statusDiv.style.color = '#4caf50';
-                } else {
-                    statusDiv.textContent = 'אנא בחר קובץ CSV בלבד';
-                    statusDiv.style.color = '#f44336';
-                    uploadedFile = null;
-                }
-            }
-        });
-        
-        // פונקציית ניתוח
-        function runAnalysis() {
-            const statusArea = document.getElementById('status-area');
-            const analyzeBtn = document.getElementById('analyze-btn');
-            const exportBtn = document.getElementById('export-btn');
-            
-            // בדיקות ולידציה
-            const seedText = document.getElementById('seed-text').value.trim();
-            if (!seedText) {
-                showStatus('❌ יש להזין היגד זרע.', 'error');
-                return;
-            }
-            
-            if (!uploadedFile) {
-                showStatus('❌ יש להעלות קובץ CSV.', 'error');
-                return;
-            }
-            
-            // השבתת כפתורים
-            analyzeBtn.disabled = true;
-            exportBtn.disabled = true;
-            showStatus('מתחיל ניתוח...', 'info');
-            
-            // כאן נקרא לפונקציות Python דרך הממשק
-            // נשתמש ב-IPython.display לקריאה חזרה ל-Python
-            window.pythonAnalysisData = {
-                seedText: seedText,
-                columnName: document.getElementById('column-name').value,
-                numStrong: parseInt(document.getElementById('num-strong').value),
-                numMedium: parseInt(document.getElementById('num-medium').value),
-                file: uploadedFile
-            };
-            
-            // קריאה ל-Python
-            IPython.notebook.kernel.execute(`
-                import json
-                from js import window
-                
-                # קבלת נתונים מ-JavaScript
-                data = window.pythonAnalysisData.to_py()
-                
-                # יצירת analyzer
-                analyzer = SeedSentenceAnalyzer(data['seedText'])
-                
-                # עיבוד הקובץ (כאן תצטרך להוסיף לוגיקה לטיפול בקובץ)
-                # ...
-                
-                # הצגת תוצאות
-                print("✅ הניתוח הושלם!")
-            `);
-            
-            // איפוס כפתורים
-            setTimeout(() => {
-                analyzeBtn.disabled = false;
-                exportBtn.disabled = false;
-            }, 2000);
-        }
-        
-        function exportExcel() {
-            if (!currentAnalyzer) {
-                showStatus('❌ לא קיים ניתוח לייצוא.', 'error');
-                return;
-            }
-            showStatus('מייצא לאקסל...', 'info');
-            // כאן תתבצע קריאה ל-Python לייצוא
-        }
-        
-        function showStatus(message, type) {
-            const statusArea = document.getElementById('status-area');
-            statusArea.style.display = 'block';
-            statusArea.textContent = message;
-            
-            if (type === 'error') {
-                statusArea.style.background = '#ffebee';
-                statusArea.style.color = '#c62828';
-                statusArea.style.border = '1px solid #e57373';
-            } else if (type === 'info') {
-                statusArea.style.background = '#e3f2fd';
-                statusArea.style.color = '#1565c0';
-                statusArea.style.border = '1px solid #90caf9';
-            } else {
-                statusArea.style.background = '#f1f8e9';
-                statusArea.style.color = '#2e7d32';
-                statusArea.style.border = '1px solid #a5d6a7';
-            }
-        }
+        // תיקון HTML widgets
+        const htmlWidgets = document.querySelectorAll('.widget-html');
+        htmlWidgets.forEach(hw => {{
+            hw.style.direction = 'rtl';
+            hw.style.textAlign = 'right';
+            hw.style.fontFamily = '{_font_family}, sans-serif';
+        }});
+    }}
+    
+    // הרצה מיידית ומחזורית
+    forceRTLLayout();
+    setTimeout(forceRTLLayout, 200);
+    setTimeout(forceRTLLayout, 500);
+    setTimeout(forceRTLLayout, 1000);
+    setTimeout(forceRTLLayout, 2000);
+    
+    // מעקב אחר שינויים ב-DOM
+    const observer = new MutationObserver(() => {{
+        setTimeout(forceRTLLayout, 50);
+    }});
+    observer.observe(document.body, {{ childList: true, subtree: true }});
     </script>
     """)
+    display(rtl_script)
     
-    # הצגת הטופס
-    display(form_html)
-    
-    # אזור פלט לתוצאות
+    # הוראות קצרות
+    instructions = widgets.HTML(
+        value=f"""
+        <div style="direction: rtl; text-align: right; font-family: {_font_family}; margin-bottom: 15px; 
+                    border: 1px solid #ddd; padding: 15px; border-radius: 8px; background-color: #f9f9f9;">
+          <b>הוראות להכנת קובץ CSV</b><br>
+          1. צור/י קובץ עם עמודה בשם <code>sentence</code>.<br>
+          2. כל שורה מכילה היגד אחד.<br>
+          3. שמור/שמרי את הקובץ בקידוד UTF-8.
+        </div>
+        """
+    )
+
+    seed_text = widgets.Textarea(
+        value="",
+        placeholder="הכנס/י כאן את היגד הזרע…",
+        description="היגד הזרע:",
+        layout=widgets.Layout(width="80%"),
+        style={'description_width': '200px'}
+    )
+
+    file_upload = widgets.FileUpload(
+        accept=".csv",
+        multiple=False,
+        description="צירוף קובץ:",
+        style={'description_width': '200px'}
+    )
+
+    column_name = widgets.Text(
+        value="sentence",
+        description="עמודת טקסט:",
+        layout=widgets.Layout(width="50%"),
+        style={'description_width': '200px'}
+    )
+
+    num_strong = widgets.IntSlider(
+        value=5, min=0, max=50, step=1,
+        description="היגדים חזקים (≥0.75):",
+        style={'description_width': '220px'},
+        layout=widgets.Layout(width="80%")
+    )
+
+    num_medium = widgets.IntSlider(
+        value=5, min=0, max=50, step=1,
+        description="היגדים בינוניים (0.70–0.749):",
+        style={'description_width': '280px'},
+        layout=widgets.Layout(width="80%")
+    )
+
+    analyze_button = widgets.Button(
+        description="בצע ניתוח",
+        button_style="success",
+        layout=widgets.Layout(width="200px", height="40px")
+    )
+
+    export_button = widgets.Button(
+        description="ייצוא לאקסל",
+        button_style="info",
+        layout=widgets.Layout(width="200px", height="40px"),
+        disabled=True
+    )
+
     output_area = widgets.Output()
-    display(output_area)
+    status_area = widgets.Output()
+
+    # משתנה שיחזיק את האנלייזר האחרון לייצוא אקסל
+    current_analyzer: Optional[SeedSentenceAnalyzer] = None
+
+    def run_analysis(_):
+        nonlocal current_analyzer
+
+        # ניקוי פלט ישן והצגת הודעת מצב מיידית
+        with output_area:
+            clear_output()
+
+        with status_area:
+            clear_output()
+            print("מתחיל ניתוח...")
+        analyze_button.disabled = True
+        export_button.disabled = True
+
+        # ולידציות
+        if not seed_text.value.strip():
+            with status_area:
+                clear_output()
+            with output_area:
+                print("❌ יש להזין היגד זרע.")
+            analyze_button.disabled = False
+            return
+        if not file_upload.value:
+            with status_area:
+                clear_output()
+            with output_area:
+                print("❌ יש להעלות קובץ CSV.")
+            analyze_button.disabled = False
+            return
+
+        # שמירת הקובץ שהועלה
+        uploaded_file = list(file_upload.value.values())[0]
+        csv_path = "uploaded_file.csv"
+        with open(csv_path, "wb") as f:
+            f.write(uploaded_file["content"])
+
+        # הרצה
+        analyzer = SeedSentenceAnalyzer(seed_text.value.strip())
+        df = analyzer.load_sentences_from_csv(csv_path, column_name.value)
+        if df is None:
+            with status_area:
+                clear_output()
+            analyze_button.disabled = False
+            return
+
+        sims = analyzer.calculate_similarities_to_seed()
+        if sims is None:
+            with status_area:
+                clear_output()
+            analyze_button.disabled = False
+            return
+
+        # הצגת תוצאות – ראשית ננקה את הודעת הסטטוס
+        with status_area:
+            clear_output()
+
+        with output_area:
+            clear_output()
+            analyzer.show_header()
+            
+            # קבלת התוצאות המפורטות
+            strong, medium, weak, all_matches = analyzer.display_results(num_strong.value, num_medium.value)
+            
+            # הצגת רשימה מפורטת עם מיקומים מקוריים
+            if strong or medium:
+                display(HTML(f'<div dir="rtl" style="text-align:right;font-family:{_font_family};margin:15px 0;"><h4>רשימה מפורטת:</h4></div>'))
+                
+                # יצירת DataFrame מפורט
+                detailed_results = []
+                
+                # הוספת היגדים חזקים
+                for i, (original_idx, sentence, score) in enumerate(strong[:num_strong.value]):
+                    detailed_results.append({
+                        'דירוג כללי': i + 1,
+                        'קטגוריה': 'חזק',
+                        'ציון דמיון': f"{score:.4f}",
+                        'מיקום מקורי בקובץ': original_idx + 1,
+                        'היגד': sentence
+                    })
+                
+                # הוספת היגדים בינוניים
+                for i, (original_idx, sentence, score) in enumerate(medium[:num_medium.value]):
+                    detailed_results.append({
+                        'דירוג כללי': len(strong[:num_strong.value]) + i + 1,
+                        'קטגוריה': 'בינוני',
+                        'ציון דמיון': f"{score:.4f}",
+                        'מיקום מקורי בקובץ': original_idx + 1,
+                        'היגד': sentence
+                    })
+                
+                if detailed_results:
+                    detailed_df = pd.DataFrame(detailed_results)
+                    display(
+                        detailed_df.style.set_table_styles([
+                            {'selector': 'th', 'props': [('text-align', 'right'), ('font-family', _font_family)]},
+                            {'selector': 'td', 'props': [('text-align', 'right'), ('font-family', _font_family)]}
+                        ]).hide(axis="index")
+                    )
+            
+            analyzer.create_visualizations()
+            display(HTML(f'<div dir="rtl" style="text-align:right;font-family:{_font_family};margin-top:15px;padding:10px;background:#e8f5e8;border-radius:5px;">הניתוח הושלם בהצלחה!</div>'))
+
+        # שמירת האנלייזר לייצוא
+        current_analyzer = analyzer
+        export_button.disabled = False
+        analyze_button.disabled = False
+
+    def export_excel(_):
+        if current_analyzer is None:
+            return
+        with status_area:
+            clear_output()
+            print("מייצא לאקסל...")
+        current_analyzer.export_to_excel(colab_link=colab_notebook_link)
+        with status_area:
+            clear_output()
+            print("✅ הקובץ יורד למחשב שלך")
+
+    # חיבור אירועים
+    analyze_button.on_click(run_analysis)
+    export_button.on_click(export_excel)
+
+    # סידור הקומפוננטות
+    container = widgets.VBox([
+        instructions,
+        seed_text,
+        file_upload,
+        column_name,
+        num_strong,
+        num_medium,
+        widgets.HBox([analyze_button, export_button], 
+                    layout=widgets.Layout(justify_content="flex-start")),
+        status_area,
+        output_area,
+    ])
     
-    return output_area
+    display(container)
+
