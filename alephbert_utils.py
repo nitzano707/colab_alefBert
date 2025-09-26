@@ -5,316 +5,461 @@ alephbert_utils.py
 פותח ע"י ד"ר ניצן אליקים | elyakim@talpiot.ac.il
 """
 
-import pandas as pd
+import os
+import time
+import warnings
+import subprocess
+from typing import Optional, Tuple, List
+
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import warnings
+
 import ipywidgets as widgets
-from IPython.display import display, clear_output
+from IPython.display import display, clear_output, HTML
+
 from sentence_transformers import SentenceTransformer, util
 import bidi.algorithm
 from arabic_reshaper import reshape
-from google.colab import files
 
-# התקנת Arial בסביבת Colab
-!apt-get -y install ttf-mscorefonts-installer fontconfig &> /dev/null
-!fc-cache -fv &> /dev/null
+# הורדה למחשב מקומי – נתמך רק ב-Colab; אם לא קיים נשאיר None
+try:
+    from google.colab import files as _colab_files  # type: ignore
+except Exception:
+    _colab_files = None
 
-# הגדרות גרפים ועיצוב
-warnings.filterwarnings('ignore')
-plt.rcParams['figure.figsize'] = (14, 10)
-plt.rcParams['axes.unicode_minus'] = False
-plt.rcParams['font.family'] = 'Arial'
-sns.set_style("whitegrid")
+# ------------------------------------------------------------
+# פונקציות עזר
+# ------------------------------------------------------------
 
-# פונקציה לתיקון עברית (גרפים בלבד)
-def fix_hebrew_text(text):
+def _ensure_arial_font() -> str:
+    """
+    מוודאת שגופן Arial קיים. אם לא – ניסיון התקנה שקט ב-Colab.
+    מחזירה את שם הגופן לשימוש ב-matplotlib.
+    """
+    import matplotlib.font_manager as fm
+
     try:
-        reshaped_text = reshape(text)
-        bidi_text = bidi.algorithm.get_display(reshaped_text)
-        return bidi_text
-    except:
+        _ = fm.findfont("Arial", fallback_to_default=False)
+        if os.path.exists(_):
+            return "Arial"
+    except Exception:
+        pass
+
+    # ניסיון התקנה ב-Colab/דביאן (שקט)
+    try:
+        subprocess.run(
+            ["apt-get", "-y", "update"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False
+        )
+        subprocess.run(
+            ["apt-get", "-y", "install", "ttf-mscorefonts-installer", "fontconfig"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False
+        )
+        subprocess.run(
+            ["fc-cache", "-fv"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False
+        )
+        _ = fm.findfont("Arial", fallback_to_default=False)
+        if os.path.exists(_):
+            return "Arial"
+    except Exception:
+        pass
+
+    # נפילה אל גופן ברירת מחדל שתומך בעברית ב-Colab
+    return "DejaVu Sans"
+
+
+def _fix_hebrew_text_for_plots(text: str) -> str:
+    """היפוך וכיווניות נכונים לעברית עבור טקסטים שבתרשימים בלבד."""
+    try:
+        return bidi.algorithm.get_display(reshape(text))
+    except Exception:
         return text
 
-# מחלקת ניתוח
+
+# ------------------------------------------------------------
+# הגדרות עיצוב גרפיות
+# ------------------------------------------------------------
+warnings.filterwarnings("ignore")
+
+_font_family = _ensure_arial_font()
+plt.rcParams["figure.figsize"] = (14, 10)
+plt.rcParams["axes.unicode_minus"] = False
+plt.rcParams["font.family"] = _font_family
+sns.set_style("whitegrid")
+
+
+# ------------------------------------------------------------
+# מחלקת הניתוח
+# ------------------------------------------------------------
 class SeedSentenceAnalyzer:
-    def __init__(self, seed_sentence, model="imvladikon/sentence-transformers-alephbert"):
+    def __init__(self, seed_sentence: str,
+                 model: str = "imvladikon/sentence-transformers-alephbert"):
         self.seed_sentence = seed_sentence.strip()
         self.model_name = model
         self.model = SentenceTransformer(model)
-        self.sentences = []
-        self.similarities = []
-        self.df = None
 
-        print("==============================================")
-        print("📊 ניתוח היגדים באמצעות AlephBERT")
-        print("פותח ע\"י: ד\"ר ניצן אליקים | elyakim@talpiot.ac.il")
-        print("==============================================")
-        print(f"🌱 משפט הזרע: \"{self.seed_sentence}\"")
-        print(f"🤖 מודל: {self.model_name}\n")
+        self.sentences: List[str] = []
+        self.similarities: List[float] = []
+        self.df: Optional[pd.DataFrame] = None
 
-    def load_sentences_from_csv(self, csv_path, sentence_column='sentence'):
+    # ---------- קריאה וקד"מ ----------
+    def load_sentences_from_csv(self, csv_path: str, sentence_column: str = "sentence") -> Optional[pd.DataFrame]:
         try:
-            self.df = pd.read_csv(csv_path, encoding='utf-8')
-            if sentence_column not in self.df.columns:
-                print(f"❌ עמודה '{sentence_column}' לא נמצאה בקובץ")
-                print(f"📋 עמודות זמינות: {list(self.df.columns)}")
+            df = pd.read_csv(csv_path, encoding="utf-8")
+            if sentence_column not in df.columns:
+                print(f"❌ עמודה '{sentence_column}' לא נמצאה בקובץ. עמודות זמינות: {list(df.columns)}")
                 return None
 
-            self.df = self.df.dropna(subset=[sentence_column])
-            self.df = self.df[self.df[sentence_column].str.strip() != '']
-            self.df = self.df[self.df[sentence_column].str.strip() != self.seed_sentence]
-            self.df = self.df.reset_index(drop=True)
+            df = df.dropna(subset=[sentence_column])
+            df = df[df[sentence_column].str.strip() != ""]
+            df = df[df[sentence_column].str.strip() != self.seed_sentence]
+            df = df.reset_index(drop=True)
 
-            self.sentences = self.df[sentence_column].tolist()
-            print(f"📂 נטענו {len(self.sentences)} היגדים מתוך הקובץ")
-
+            self.sentences = df[sentence_column].tolist()
+            self.df = df
             return self.df
+
         except Exception as e:
-            print(f"❌ שגיאה בטעינת הקובץ: {e}")
+            print(f"❌ שגיאה בטעינת קובץ ה-CSV: {e}")
             return None
 
-    def calculate_similarities_to_seed(self):
+    def calculate_similarities_to_seed(self) -> Optional[List[float]]:
         if not self.sentences:
-            print("❌ אין היגדים לעיבוד. טען קובץ CSV קודם.")
+            print("❌ אין היגדים לעיבוד. יש לטעון קובץ CSV תחילה.")
             return None
-
-        print(f"🔄 מחשב דמיון עבור {len(self.sentences)} היגדים למשפט הזרע...")
-        print("⏳ זה הרבה יותר מהיר מאשר חישוב מטריצה מלאה!")
 
         try:
             seed_emb = self.model.encode(self.seed_sentence, convert_to_tensor=True)
             sent_embs = self.model.encode(self.sentences, convert_to_tensor=True)
-            self.similarities = util.cos_sim(seed_emb, sent_embs).cpu().numpy().flatten().tolist()
-
-            print(f"✅ הסתיים! חושבו {len(self.similarities)} השוואות")
+            sims = util.cos_sim(seed_emb, sent_embs).cpu().numpy().flatten().tolist()
+            self.similarities = sims
 
             if self.df is not None:
-                self.df['similarity_score'] = self.similarities
-                self.df = self.df.sort_values('similarity_score', ascending=False).reset_index(drop=True)
+                self.df["similarity_score"] = sims
+                self.df = self.df.sort_values("similarity_score", ascending=False).reset_index(drop=True)
 
             return self.similarities
         except Exception as e:
-            print(f"❌ שגיאה בחישוב דמיון: {e}")
+            print(f"❌ שגיאה בחישוב דמיון קוסיני: {e}")
             return None
 
-    def display_results(self, num_strong=5, num_medium=5):
-        if not self.similarities:
-            print("❌ עדיין לא חושבו ציונים")
-            return None
+    # ---------- תצוגת תוצאות ----------
+    def show_header(self):
+        box = HTML(
+            f"""
+            <div dir="rtl" style="text-align:right;font-family:{_font_family};border:2px solid #2e7d32;border-radius:8px;padding:12px;margin:10px 0;">
+              <div style="font-size:18px;font-weight:700;margin-bottom:6px;">תוצאות ניתוח</div>
+              <div><b>פותח ע"י ד"ר ניצן אליקים</b> | <a href="mailto:elyakim@talpiot.ac.il">elyakim@talpiot.ac.il</a></div>
+              <div>היגד הזרע: <b>{self.seed_sentence}</b></div>
+              <div>מודל: {self.model_name}</div>
+            </div>
+            """
+        )
+        display(box)
 
-        all_matches = [(i, sentence, score) for i, (sentence, score) in enumerate(zip(self.sentences, self.similarities))]
+    def display_results(self, num_strong: int = 5, num_medium: int = 5) -> Tuple[list, list, list, list]:
+        all_matches = [(i, s, sc) for i, (s, sc) in enumerate(zip(self.sentences, self.similarities))]
         all_matches.sort(key=lambda x: x[2], reverse=True)
 
         strong = [m for m in all_matches if m[2] >= 0.75]
         medium = [m for m in all_matches if 0.70 <= m[2] < 0.75]
         weak = [m for m in all_matches if m[2] < 0.70]
 
-        print("\n📑 תוצאות הניתוח:")
-        print("=" * 100)
+        # סיכום מילולי
+        summary_html = f"""
+        <div dir="rtl" style="text-align:right;font-family:{_font_family};margin:6px 0 12px 0;">
+          נמצאו <b>{len(strong)}</b> היגדים דומים מאוד (≥0.75),
+          <b>{len(medium)}</b> היגדים דומים במידה בינונית (0.70–0.749),
+          ו־<b>{len(weak)}</b> היגדים רחוקים במשמעות.
+          סה"כ נותחו <b>{len(all_matches)}</b> היגדים.
+        </div>
+        """
+        display(HTML(summary_html))
 
-        # חזק
-        if strong:
-            show_n = min(num_strong, len(strong))
-            print(f"\n🟢 דמיון חזק (≥0.75) ({len(strong)} היגדים): מציג {show_n}")
-            print("-" * 100)
-            for rank, (i, s, sc) in enumerate(strong[:show_n], 1):
-                print(f"🟢 #{rank:2d} | ציון: {sc:.4f} ({sc*100:.1f}%) | היגד {i+1:3d}")
-                print(f"    \"{s}\"")
-                print()
+        # טבלת Top-N (חזקים + בינוניים)
+        top_items = strong[:num_strong] + medium[:num_medium]
+        if top_items:
+            df_top = pd.DataFrame([(s, f"{sc:.3f}") for (_, s, sc) in top_items],
+                                  columns=["היגד", "ציון דמיון"])
+            # הצגה מיושרת לימין
+            display(
+                df_top.style.set_table_styles(
+                    [{'selector': 'th', 'props': [('text-align', 'right'), ('font-family', _font_family)]}]
+                ).set_properties(**{'text-align': 'right', 'font-family': _font_family})
+            )
 
-        # בינוני
-        if medium:
-            show_n = min(num_medium, len(medium))
-            print(f"\n🟡 דמיון בינוני (0.70-0.749) ({len(medium)} היגדים): מציג {show_n}")
-            print("-" * 100)
-            for rank, (i, s, sc) in enumerate(medium[:show_n], 1):
-                print(f"🟡 #{rank:2d} | ציון: {sc:.4f} ({sc*100:.1f}%) | היגד {i+1:3d}")
-                print(f"    \"{s}\"")
-                print()
-
-        print(f"\n📊 סיכום:")
-        print(f"🔥 חזק (≥0.75): {len(strong):3d} היגדים")
-        print(f"🟡 בינוני (0.70-0.749): {len(medium):3d} היגדים")
-        print(f"🔵 חלש (<0.70): {len(weak):3d} היגדים")
-        print(f"📝 סה\"כ: {len(all_matches):3d} היגדים")
-        if all_matches:
-            best_score = all_matches[0][2]
-            print(f"🎯 הציון הגבוה ביותר: {best_score:.4f} ({best_score*100:.1f}%)")
-
-        print("\n📝 סיכום מילולי:")
-        print("מרבית ההיגדים שנבחנו נמצאים ברמת דמיון גבוהה או בינונית. מומלץ לבחור מתוכם את ההיגדים החזקים, "
-              "ולשקול מחדש את אלה שציוניהם חלשים יותר.")
+        return strong, medium, weak, all_matches
 
     def create_visualizations(self):
         scores = np.array(self.similarities)
         fig, axes = plt.subplots(2, 3, figsize=(20, 12))
 
-        categories = [fix_hebrew_text('דמיון חזק (≥0.75)'),
-                      fix_hebrew_text('דמיון בינוני (0.70-0.749)'),
-                      fix_hebrew_text('דמיון חלש (<0.70)')]
-        counts = [len([s for s in scores if s >= 0.75]),
-                  len([s for s in scores if 0.70 <= s < 0.75]),
-                  len([s for s in scores if s < 0.70])]
-        axes[0,0].bar(categories, counts, color=['green','gold','skyblue'])
-        axes[0,0].set_title(fix_hebrew_text("התפלגות לפי רמות דמיון"))
+        categories = [_fix_hebrew_text_for_plots('דמיון חזק (≥0.75)'),
+                      _fix_hebrew_text_for_plots('דמיון בינוני (0.70-0.749)'),
+                      _fix_hebrew_text_for_plots('דמיון חלש (<0.70)')]
+        counts = [np.sum(scores >= 0.75),
+                  np.sum((scores >= 0.70) & (scores < 0.75)),
+                  np.sum(scores < 0.70)]
 
-        axes[0,1].hist(scores, bins=20, alpha=0.7, color='lightblue', edgecolor='black')
-        axes[0,1].axvline(np.mean(scores), color='red', linestyle='--', label=fix_hebrew_text(f'ממוצע: {np.mean(scores):.3f}'))
-        axes[0,1].axvline(np.median(scores), color='green', linestyle='--', label=fix_hebrew_text(f'חציון: {np.median(scores):.3f}'))
-        axes[0,1].legend()
-        axes[0,1].set_title(fix_hebrew_text("התפלגות ציוני דמיון"))
+        axes[0, 0].bar(categories, counts, color=['green', 'gold', 'skyblue'])
+        axes[0, 0].set_title(_fix_hebrew_text_for_plots("התפלגות לפי רמות דמיון"))
 
-        top_15_idx = np.argsort(scores)[-15:][::-1]
+        axes[0, 1].hist(scores, bins=20, alpha=0.7, color='lightblue', edgecolor='black')
+        axes[0, 1].axvline(np.mean(scores), color='red', linestyle='--',
+                           label=_fix_hebrew_text_for_plots(f'ממוצע: {np.mean(scores):.3f}'))
+        axes[0, 1].axvline(np.median(scores), color='green', linestyle='--',
+                           label=_fix_hebrew_text_for_plots(f'חציון: {np.median(scores):.3f}'))
+        axes[0, 1].legend()
+        axes[0, 1].set_title(_fix_hebrew_text_for_plots("התפלגות ציוני דמיון"))
+
+        top_15_idx = np.argsort(scores)[-15:][::-1] if len(scores) >= 15 else np.argsort(scores)[::-1]
         top_15_scores = scores[top_15_idx]
-        axes[0,2].bar(range(1,16), top_15_scores, color='green')
-        axes[0,2].axhline(y=0.75, color='darkgreen', linestyle='--', label=fix_hebrew_text('חזק (0.75)'))
-        axes[0,2].axhline(y=0.70, color='orange', linestyle='--', label=fix_hebrew_text('בינוני (0.70)'))
-        axes[0,2].legend()
-        axes[0,2].set_title(fix_hebrew_text("טופ 15 ציוני דמיון"))
+        axes[0, 2].bar(range(1, len(top_15_scores) + 1), top_15_scores, color='green')
+        axes[0, 2].axhline(y=0.75, color='darkgreen', linestyle='--',
+                           label=_fix_hebrew_text_for_plots('חזק (0.75)'))
+        axes[0, 2].axhline(y=0.70, color='orange', linestyle='--',
+                           label=_fix_hebrew_text_for_plots('בינוני (0.70)'))
+        axes[0, 2].legend()
+        axes[0, 2].set_title(_fix_hebrew_text_for_plots("טופ 15 ציוני דמיון"))
 
-        axes[1,0].boxplot(scores, patch_artist=True, boxprops=dict(facecolor='lightgreen', alpha=0.7))
-        axes[1,0].axhline(y=0.75, color='darkgreen', linestyle='--')
-        axes[1,0].axhline(y=0.70, color='orange', linestyle='--')
-        axes[1,0].set_title(fix_hebrew_text("Box Plot"))
+        axes[1, 0].boxplot(scores, patch_artist=True, boxprops=dict(facecolor='lightgreen', alpha=0.7))
+        axes[1, 0].axhline(y=0.75, color='darkgreen', linestyle='--')
+        axes[1, 0].axhline(y=0.70, color='orange', linestyle='--')
+        axes[1, 0].set_title(_fix_hebrew_text_for_plots("Box Plot"))
 
-        top_20_idx = np.argsort(scores)[-20:][::-1]
-        heatmap_data = scores[top_20_idx].reshape(4, 5)
-        im = axes[1,1].imshow(heatmap_data, cmap='RdYlGn', vmin=0, vmax=1)
-        for i in range(4):
-            for j in range(5):
-                axes[1,1].text(j, i, f"{heatmap_data[i,j]:.3f}", ha="center", va="center", color="black")
-        axes[1,1].set_title(fix_hebrew_text("מפת חום - טופ 20"))
-        fig.colorbar(im, ax=axes[1,1])
+        # מפת חום לטופ 20
+        top_n = min(20, len(scores))
+        if top_n > 0:
+            top_idx = np.argsort(scores)[-top_n:][::-1]
+            heatmap_data = scores[top_idx]
+            # ריפוד ל-4x5 במקרה של פחות מ-20
+            pad = 20 - top_n
+            if pad > 0:
+                heatmap_data = np.concatenate([heatmap_data, np.full(pad, np.nan)])
+            heatmap_data = heatmap_data.reshape(4, 5)
 
-        axes[1,2].axis('off')
+            im = axes[1, 1].imshow(heatmap_data, cmap='RdYlGn', vmin=0, vmax=1)
+            for i in range(4):
+                for j in range(5):
+                    val = heatmap_data[i, j]
+                    if not np.isnan(val):
+                        axes[1, 1].text(j, i, f"{val:.3f}", ha="center", va="center", color="black")
+            axes[1, 1].set_title(_fix_hebrew_text_for_plots("מפת חום - טופ 20"))
+            fig.colorbar(im, ax=axes[1, 1])
+
+        axes[1, 2].axis('off')
         plt.tight_layout(pad=3.0)
         plt.show()
 
-    def export_to_excel(self, colab_link="https://colab.research.google.com/"):
+    # ---------- ייצוא ----------
+    def export_to_excel(self, colab_link: str = "https://colab.research.google.com/"):
         if self.df is None:
             print("❌ אין נתונים לייצוא")
             return
 
-        filename = "results.xlsx"
-        with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
+        # נבנה גיליון מסודר בעברית
+        filename = "תוצאות_ניתוח.xlsx"
+        with pd.ExcelWriter(filename, engine="xlsxwriter") as writer:
             workbook = writer.book
-            worksheet = workbook.add_worksheet("Results")
-            writer.sheets["Results"] = worksheet
+            ws = workbook.add_worksheet("תוצאות")
+            writer.sheets["תוצאות"] = ws
 
-            bold = workbook.add_format({'bold': True})
+            bold = workbook.add_format({"bold": True})
 
-            worksheet.write("A1", "משפט הזרע", bold)
-            worksheet.write("B1", self.seed_sentence, bold)
+            # שורה 1: משפט הזרע
+            ws.write("A1", "משפט הזרע", bold)
+            ws.write("B1", self.seed_sentence, bold)
 
-            worksheet.write("A2", f"הקובץ נוצר ע\"י מחברת COLAB: {colab_link}")
+            # שורה 2: נוצר ע"י COLAB
+            ws.write("A2", f"קובץ זה נוצר ע\"י מחברת COLAB: {colab_link}")
 
-            self.df.to_excel(writer, sheet_name="Results", startrow=4, index=False)
+            # רווח שורה
+            ws.write("A3", "")
 
-        print(f"💾 הקובץ נשמר בשם {filename}")
-        files.download(filename)
+            # טבלה מלאה
+            df_out = self.df.copy()
+            if "sentence" in df_out.columns:
+                df_out = df_out.rename(columns={"sentence": "היגד"})
+            if "similarity_score" in df_out.columns:
+                df_out = df_out.rename(columns={"similarity_score": "ציון דמיון"})
+            df_out.to_excel(writer, sheet_name="תוצאות", startrow=3, index=False)
 
-# טופס אינטראקטיבי
-def create_analysis_form():
+        print(f"📁 נשמר ב-Colab: {filename}")
+        if _colab_files is not None:
+            _colab_files.download(filename)
+
+
+# ------------------------------------------------------------
+# טופס אינטראקטיבי (UI)
+# ------------------------------------------------------------
+def create_analysis_form(colab_notebook_link: str = "https://colab.research.google.com/"):
+    """
+    מציג טופס ניתוח היגדים. colab_notebook_link – ייכתב בשורת ההסבר באקסל.
+    """
+    # הוראות קצרות
+    instructions = HTML(
+        f"""
+        <div dir="rtl" style="text-align:right;font-family:{_font_family};margin-bottom:8px;">
+          <b>הוראות להכנת קובץ CSV</b><br>
+          1. צור/י קובץ עם עמודה בשם <code>sentence</code>.<br>
+          2. כל שורה מכילה היגד אחד.<br>
+          3. שמור/שמרי את הקובץ בקידוד UTF-8.
+        </div>
+        """
+    )
+
     seed_text = widgets.Textarea(
-        value='',
-        placeholder='הכנס כאן את משפט הזרע...',
-        description='משפט הזרע:',
-        layout=widgets.Layout(width='80%', direction='rtl')
+        value="",
+        placeholder="הכנס/י כאן את היגד הזרע…",
+        description="היגד הזרע:",
+        layout=widgets.Layout(width="80%"),
+        style={'description_width': 'initial'}
     )
 
     file_upload = widgets.FileUpload(
-        accept='.csv',
+        accept=".csv",
         multiple=False,
-        description='צירוף קובץ',
-        layout=widgets.Layout(direction='rtl')
+        description="צירוף קובץ",
+        style={'description_width': 'initial'}
     )
 
     column_name = widgets.Text(
-        value='sentence',
-        description='עמודת טקסט:',
-        layout=widgets.Layout(width='50%', direction='rtl')
+        value="sentence",
+        description="עמודת טקסט:",
+        layout=widgets.Layout(width="40%"),
+        style={'description_width': 'initial'}
     )
 
     num_strong = widgets.IntSlider(
         value=5, min=0, max=50, step=1,
-        description='היגדים חזקים (≥0.75):',
+        description="היגדים חזקים (≥0.75):",
         style={'description_width': 'initial'},
-        layout=widgets.Layout(width='80%', direction='rtl')
+        layout=widgets.Layout(width="80%")
     )
 
     num_medium = widgets.IntSlider(
         value=5, min=0, max=50, step=1,
-        description='היגדים בינוניים (0.70-0.749):',
+        description="היגדים בינוניים (0.70–0.749):",
         style={'description_width': 'initial'},
-        layout=widgets.Layout(width='80%', direction='rtl')
+        layout=widgets.Layout(width="80%")
     )
 
     analyze_button = widgets.Button(
-        description='🔍 בצע ניתוח',
-        button_style='success',
-        layout=widgets.Layout(width='200px', height='40px')
+        description="בצע ניתוח",
+        button_style="success",
+        layout=widgets.Layout(width="200px", height="40px")
     )
 
     export_button = widgets.Button(
-        description='⬇️ הורדת אקסל',
-        button_style='info',
-        layout=widgets.Layout(width='200px', height='40px')
+        description="ייצוא לאקסל",
+        button_style="info",
+        layout=widgets.Layout(width="200px", height="40px"),
+        disabled=True
     )
-    export_button.disabled = True
 
-    output_area = widgets.Output(layout={'border': '1px solid gray'})
+    output_area = widgets.Output()  # כאן יוצגו התוצאות
+    status_area = widgets.Output()  # הודעת "מתחיל ניתוח…"
 
-    def on_analyze_clicked(b):
+    # משתנה שיחזיק את האנלייזר האחרון לייצוא אקסל
+    current_analyzer: Optional[SeedSentenceAnalyzer] = None
+
+    def run_analysis(_):
+        nonlocal current_analyzer
+
+        # ניקוי פלט ישן והצגת הודעת מצב מיידית
         with output_area:
             clear_output()
-            print("🚀 מתחיל ניתוח...")
-        analyze_button.disabled = True
 
+        with status_area:
+            clear_output()
+            print("מתחיל ניתוח...")     # מוצג מיידית
+        analyze_button.disabled = True
+        export_button.disabled = True
+
+        # השהיה קצרה כדי להרנדר את ההודעה לפני עיבוד כבד
+        time.sleep(0.05)
+
+        # ולידציות
         if not seed_text.value.strip():
-            with output_area:
+            with status_area:
                 clear_output()
-                print("❌ יש להזין משפט זרע")
+            with output_area:
+                print("❌ יש להזין היגד זרע.")
             analyze_button.disabled = False
             return
         if not file_upload.value:
-            with output_area:
+            with status_area:
                 clear_output()
-                print("❌ יש להעלות קובץ CSV")
+            with output_area:
+                print("❌ יש להעלות קובץ CSV.")
             analyze_button.disabled = False
             return
 
+        # שמירת הקובץ שהועלה
         uploaded_file = list(file_upload.value.values())[0]
-        filename = 'uploaded_file.csv'
-        with open(filename, 'wb') as f:
-            f.write(uploaded_file['content'])
+        csv_path = "uploaded_file.csv"
+        with open(csv_path, "wb") as f:
+            f.write(uploaded_file["content"])
 
+        # הרצה
         analyzer = SeedSentenceAnalyzer(seed_text.value.strip())
-        df = analyzer.load_sentences_from_csv(filename, column_name.value)
+        df = analyzer.load_sentences_from_csv(csv_path, column_name.value)
         if df is None:
+            with status_area:
+                clear_output()
             analyze_button.disabled = False
             return
-        similarities = analyzer.calculate_similarities_to_seed()
-        if similarities is None:
+
+        sims = analyzer.calculate_similarities_to_seed()
+        if sims is None:
+            with status_area:
+                clear_output()
             analyze_button.disabled = False
             return
+
+        # הצגת תוצאות – ראשית ננקה את הודעת הסטטוס
+        with status_area:
+            clear_output()
 
         with output_area:
             clear_output()
+            analyzer.show_header()
             analyzer.display_results(num_strong.value, num_medium.value)
             analyzer.create_visualizations()
+            display(HTML(f'<div dir="rtl" style="text-align:right;font-family:{_font_family};margin-top:6px;">הניתוח הושלם.</div>'))
 
-        export_button.on_click(lambda b: analyzer.export_to_excel())
+        # שמירת האנלייזר לייצוא
+        current_analyzer = analyzer
         export_button.disabled = False
         analyze_button.disabled = False
 
-    analyze_button.on_click(on_analyze_clicked)
+    def export_excel(_):
+        if current_analyzer is None:
+            return
+        with output_area:
+            print("מייצא לאקסל...")
+        current_analyzer.export_to_excel(colab_link=colab_notebook_link)
 
-    form = widgets.VBox([
-        seed_text, file_upload, column_name, num_strong, num_medium,
-        widgets.HBox([analyze_button, export_button]),
-        output_area
-    ], layout=widgets.Layout(direction='rtl'))
+    # חיבור אירועים (handler יחיד, לא נערום מאזינים)
+    analyze_button.on_click(run_analysis)
+    export_button.on_click(export_excel)
 
-    display(form)
+    # סידור RTL לכל הקומפוננטות
+    container = widgets.VBox(
+        [
+            instructions,
+            seed_text,
+            file_upload,
+            column_name,
+            num_strong,
+            num_medium,
+            widgets.HBox([analyze_button, export_button], layout=widgets.Layout(justify_content="flex-start")),
+            status_area,
+            output_area,
+        ],
+        layout=widgets.Layout(direction="rtl")  # RTL כולל לכל הצאצאים
+    )
+    display(container)
