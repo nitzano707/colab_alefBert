@@ -11,14 +11,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import warnings
 import ipywidgets as widgets
-from IPython.display import display, clear_output, HTML
+from IPython.display import display, clear_output
 from sentence_transformers import SentenceTransformer, util
 import bidi.algorithm
 from arabic_reshaper import reshape
-
-from google.colab import files
-import openpyxl
-from openpyxl.styles import Font
+from google.colab import files   # ייבוא מודול להורדת קבצים
 
 warnings.filterwarnings('ignore')
 
@@ -35,7 +32,7 @@ def fix_hebrew_text(text):
 plt.rcParams['figure.figsize'] = (14, 10)
 plt.rcParams['axes.unicode_minus'] = False
 sns.set_style("whitegrid")
-plt.rcParams['font.family'] = 'Arial'
+plt.rcParams['font.family'] = 'DejaVu Sans'
 
 # מחלקת ניתוח
 class SeedSentenceAnalyzer:
@@ -46,6 +43,14 @@ class SeedSentenceAnalyzer:
         self.sentences = []
         self.similarities = []
         self.df = None
+
+        # כותרת בראש הפלט
+        print("=" * 100)
+        print("📊 תוצאות ניתוח")
+        print("פותח ע\"י: ד\"ר ניצן אליקים | elyakim@talpiot.ac.il")
+        print(f"📌 היגד הזרע: \"{self.seed_sentence}\"")
+        print(f"🤖 מודל: {self.model_name}")
+        print("=" * 100)
 
     def load_sentences_from_csv(self, csv_path, sentence_column='sentence'):
         try:
@@ -61,6 +66,8 @@ class SeedSentenceAnalyzer:
             self.df = self.df.reset_index(drop=True)
 
             self.sentences = self.df[sentence_column].tolist()
+            print(f"✅ נטענו {len(self.sentences)} היגדים")
+
             return self.df
         except Exception as e:
             print(f"❌ שגיאה בטעינת הקובץ: {e}")
@@ -71,6 +78,7 @@ class SeedSentenceAnalyzer:
             print("❌ אין היגדים לעיבוד. טען קובץ CSV קודם.")
             return None
 
+        print("🚀 מתחיל ניתוח...")
         try:
             seed_emb = self.model.encode(self.seed_sentence, convert_to_tensor=True)
             sent_embs = self.model.encode(self.sentences, convert_to_tensor=True)
@@ -97,48 +105,32 @@ class SeedSentenceAnalyzer:
         medium = [m for m in all_matches if 0.70 <= m[2] < 0.75]
         weak = [m for m in all_matches if m[2] < 0.70]
 
-        # כותרת ותצוגה מסודרת
-        header_html = f"""
-        <div dir="rtl" style="text-align:right; font-family:Arial; border:2px solid green; padding:10px; margin:10px 0;">
-            <h3>📊 תוצאות ניתוח</h3>
-            <p><b>פותח ע"י ד"ר ניצן אליקים | elyakim@talpiot.ac.il</b></p>
-            <p>🌱 היגד זרע: "{self.seed_sentence}"</p>
-            <p>🤖 מודל: {self.model_name}</p>
-        </div>
-        """
-        display(HTML(header_html))
+        print(f"\n🔎 סיכום תוצאות:")
+        print(f"🟢 חזק (≥0.75): {len(strong):3d} היגדים")
+        print(f"🟡 בינוני (0.70-0.749): {len(medium):3d} היגדים")
+        print(f"🔵 חלש (<0.70): {len(weak):3d} היגדים")
+        print(f"📝 סה\"כ: {len(all_matches):3d} היגדים")
+
+        if all_matches:
+            best_score = all_matches[0][2]
+            print(f"🎯 הציון הגבוה ביותר: {best_score:.4f} ({best_score*100:.1f}%)")
 
         # סיכום מילולי קצר
-        summary_text = f"""
-        <div dir="rtl" style="text-align:right; font-family:Arial; padding:5px;">
-            <p>נמצאו <b>{len(strong)}</b> היגדים דומים מאוד (≥0.75), 
-            <b>{len(medium)}</b> היגדים דומים במידה בינונית (0.70–0.749),
-            ו־<b>{len(weak)}</b> היגדים רחוקים במשמעות.</p>
-            <p>סה"כ נותחו <b>{len(all_matches)}</b> היגדים.</p>
-        </div>
-        """
-        display(HTML(summary_text))
-
-        # טבלה עם Top-N היגדים (חזקים ובינוניים בלבד)
-        top_items = strong[:num_strong] + medium[:num_medium]
-        if top_items:
-            df_top = pd.DataFrame(
-                [(s, f"{sc:.3f}") for (_, s, sc) in top_items],
-                columns=["היגד", "ציון דמיון"]
-            )
-            display(df_top.style.set_table_styles(
-                [{'selector': 'th', 'props': [('text-align', 'right'), ('font-family', 'Arial')]}]
-            ).set_properties(**{'text-align': 'right', 'font-family': 'Arial'}))
-
-        return strong, medium, weak, all_matches
+        print("\n✍️ פרשנות:")
+        if strong:
+            print("נמצאו היגדים דומים מאוד, המעידים על קשר מהותי למשפט הזרע.")
+        elif medium:
+            print("נמצאו היגדים עם דמיון בינוני, יש מקום לבחינה נוספת.")
+        else:
+            print("לא נמצאו היגדים דומים משמעותית.")
 
     def create_visualizations(self):
         scores = np.array(self.similarities)
         fig, axes = plt.subplots(2, 3, figsize=(20, 12))
 
-        categories = [fix_hebrew_text('דמיון חזק (≥0.75)'),
-                      fix_hebrew_text('דמיון בינוני (0.70-0.749)'),
-                      fix_hebrew_text('דמיון חלש (<0.70)')]
+        categories = [fix_hebrew_text('חזק (≥0.75)'),
+                      fix_hebrew_text('בינוני (0.70-0.749)'),
+                      fix_hebrew_text('חלש (<0.70)')]
         counts = [len([s for s in scores if s >= 0.75]),
                   len([s for s in scores if 0.70 <= s < 0.75]),
                   len([s for s in scores if s < 0.70])]
@@ -177,35 +169,54 @@ class SeedSentenceAnalyzer:
         plt.tight_layout(pad=3.0)
         plt.show()
 
+    def export_to_excel(self, colab_link="https://colab.research.google.com/"):
+        if self.df is None:
+            print("❌ אין נתונים לייצוא")
+            return
+
+        # יצירת DataFrame חדש עם שורת כותרת נוספת
+        header = pd.DataFrame({"היגד": [f"📌 היגד הזרע: {self.seed_sentence}"], 
+                               "ציון דמיון": [""]})
+        note = pd.DataFrame({"היגד": [f"ℹ️ קובץ זה נוצר ע\"י מחברת COLAB: {colab_link}"], 
+                             "ציון דמיון": [""]})
+
+        export_df = pd.concat([header, note, self.df.rename(columns={"sentence": "היגד", "similarity_score": "ציון דמיון"})],
+                              ignore_index=True)
+
+        filename = "analysis_results.xlsx"
+        export_df.to_excel(filename, index=False)
+
+        print(f"📂 הקובץ נשמר ב-Colab בשם {filename}")
+        files.download(filename)  # הורדה למחשב המשתמש
+
 
 # טופס אינטראקטיבי (ipywidgets)
 def create_analysis_form():
-    instructions = widgets.HTML("""
-    <div dir="rtl" style="text-align:right; font-family:Arial;">
-    <b>📁 הוראות להכנת קובץ CSV:</b><br>
-    1. צור קובץ עם עמודה בשם 'sentence'<br>
-    2. כל שורה מכילה היגד אחד<br>
-    3. שמור את הקובץ ב־UTF-8
-    </div>
-    """)
+    print("""
+📁 הוראות להכנת קובץ CSV:
+1. צור קובץ עם עמודה בשם 'sentence'
+2. כל שורה מכילה היגד אחד
+3. שמור את הקובץ ב-UTF-8
+""")
 
     seed_text = widgets.Textarea(
         value='',
         placeholder='הכנס כאן את היגד הזרע...',
         description='היגד הזרע:',
-        layout=widgets.Layout(width='80%')
+        layout=widgets.Layout(width='80%', direction='rtl')
     )
 
     file_upload = widgets.FileUpload(
         accept='.csv',
         multiple=False,
-        description='צירוף קובץ'
+        description='צירוף קובץ',
+        style={'description_width': 'initial'}
     )
 
     column_name = widgets.Text(
         value='sentence',
         description='עמודת טקסט:',
-        layout=widgets.Layout(width='50%')
+        layout=widgets.Layout(width='50%', direction='rtl')
     )
 
     num_strong = widgets.IntSlider(
@@ -229,95 +240,46 @@ def create_analysis_form():
     )
 
     export_button = widgets.Button(
-        description='⬇️ ייצוא לאקסל',
+        description='📥 ייצוא לאקסל',
         button_style='info',
         layout=widgets.Layout(width='200px', height='40px')
     )
-    export_button.disabled = True
 
-    output_area = widgets.Output()
+    output = widgets.Output()
 
     def on_analyze_clicked(b):
-        with output_area:
+        with output:
             clear_output()
-            print("🚀 מתחיל ניתוח...")
-        analyze_button.disabled = True
-
-        if not seed_text.value.strip():
-            with output_area:
-                clear_output()
+            if not seed_text.value.strip():
                 print("❌ יש להזין היגד זרע")
-            analyze_button.disabled = False
-            return
-        if not file_upload.value:
-            with output_area:
-                clear_output()
+                return
+            if not file_upload.value:
                 print("❌ יש להעלות קובץ CSV")
-            analyze_button.disabled = False
-            return
+                return
 
-        uploaded_file = list(file_upload.value.values())[0]
-        filename = 'uploaded_file.csv'
-        with open(filename, 'wb') as f:
-            f.write(uploaded_file['content'])
+            uploaded_file = list(file_upload.value.values())[0]
+            filename = 'uploaded_file.csv'
+            with open(filename, 'wb') as f:
+                f.write(uploaded_file['content'])
 
-        analyzer = SeedSentenceAnalyzer(seed_text.value.strip())
-        df = analyzer.load_sentences_from_csv(filename, column_name.value)
-        if df is None:
-            analyze_button.disabled = False
-            return
-        similarities = analyzer.calculate_similarities_to_seed()
-        if similarities is None:
-            analyze_button.disabled = False
-            return
-
-        with output_area:
-            clear_output()
-            strong, medium, weak, all_matches = analyzer.display_results(num_strong.value, num_medium.value)
+            analyzer = SeedSentenceAnalyzer(seed_text.value.strip())
+            df = analyzer.load_sentences_from_csv(filename, column_name.value)
+            if df is None:
+                return
+            similarities = analyzer.calculate_similarities_to_seed()
+            if similarities is None:
+                return
+            analyzer.display_results(num_strong.value, num_medium.value)
             analyzer.create_visualizations()
-            print("\n🎉 הניתוח הושלם בהצלחה!")
 
-        # הפעלת כפתור ייצוא
-        def export_to_excel(btn):
-            df_out = pd.DataFrame([(s, sc) for (_, s, sc) in all_matches],
-                                  columns=["היגד", "ציון דמיון"])
-
-            # יצירת קובץ אקסל חדש עם openpyxl
-            filename = "תוצאות_ניתוח.xlsx"
-            wb = openpyxl.Workbook()
-            ws = wb.active
-            ws.title = "תוצאות"
-
-            # שורה 1: משפט הזרע
-            ws.append([f"🌱 משפט הזרע: {seed_text.value.strip()}"])
-            ws["A1"].font = Font(bold=True)
-
-            # שורה 2: נוצר ע״י COLAB
-            notebook_link = "https://colab.research.google.com/drive/your_notebook_id"  # תעדכן את הלינק שלך
-            ws.append([f"📓 נוצר ע״י מחברת COLAB: {notebook_link}"])
-
-            # שורה ריקה
-            ws.append([])
-
-            # כותרות הטבלה
-            ws.append(["היגד", "ציון דמיון"])
-            for row in df_out.itertuples(index=False):
-                ws.append(row)
-
-            wb.save(filename)
-
-            # הורדה למחשב המקומי
-            files.download(filename)
-
-        export_button.on_click(export_to_excel)
-        export_button.disabled = False
-        analyze_button.disabled = False
+            # שמירת האובייקט לייצוא
+            export_button.on_click(lambda x: analyzer.export_to_excel())
 
     analyze_button.on_click(on_analyze_clicked)
 
     form = widgets.VBox([
-        instructions, seed_text, file_upload, column_name,
-        num_strong, num_medium, analyze_button, export_button, output_area
+        seed_text, file_upload, column_name, num_strong, num_medium,
+        widgets.HBox([analyze_button, export_button]),
+        output
     ])
     display(form)
-
