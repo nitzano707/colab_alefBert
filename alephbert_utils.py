@@ -300,52 +300,76 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
     """
     מציג טופס ניתוח היגדים. colab_notebook_link – ייכתב בשורת ההסבר באקסל.
     """
+    
+    # הוספת CSS לתיקון RTL ב-Colab
+    rtl_style = HTML("""
+    <style>
+    .widget-text input, .widget-textarea textarea {
+        direction: rtl !important;
+        text-align: right !important;
+        font-family: Arial, 'DejaVu Sans', sans-serif !important;
+    }
+    .widget-label {
+        direction: rtl !important;
+        text-align: right !important;
+        font-family: Arial, 'DejaVu Sans', sans-serif !important;
+    }
+    .widget-html {
+        direction: rtl !important;
+        text-align: right !important;
+    }
+    .widget-button .widget-label {
+        font-family: Arial, 'DejaVu Sans', sans-serif !important;
+    }
+    </style>
+    """)
+    display(rtl_style)
+    
     # הוראות קצרות
     instructions = widgets.HTML(
-    value="""
-        <div dir="rtl" style="text-align:right;font-family:Arial;margin-bottom:8px;">
+        value=f"""
+        <div dir="rtl" style="text-align:right;font-family:{_font_family};margin-bottom:8px;">
           <b>הוראות להכנת קובץ CSV</b><br>
           1. צור/י קובץ עם עמודה בשם <code>sentence</code>.<br>
           2. כל שורה מכילה היגד אחד.<br>
           3. שמור/שמרי את הקובץ בקידוד UTF-8.
         </div>
-    """
-)
-
+        """
+    )
 
     seed_text = widgets.Textarea(
         value="",
         placeholder="הכנס/י כאן את היגד הזרע…",
         description="היגד הזרע:",
         layout=widgets.Layout(width="80%"),
-        style={'description_width': 'initial'}
+        style={'description_width': '120px', 'font_family': _font_family}
     )
 
     file_upload = widgets.FileUpload(
         accept=".csv",
         multiple=False,
-        description="צירוף קובץ",
-        style={'description_width': 'initial'}
+        description="צירוף קובץ:",
+        style={'description_width': '120px', 'font_family': _font_family}
     )
 
     column_name = widgets.Text(
         value="sentence",
         description="עמודת טקסט:",
         layout=widgets.Layout(width="40%"),
-        style={'description_width': 'initial'}
+        style={'description_width': '120px', 'font_family': _font_family}
     )
 
     num_strong = widgets.IntSlider(
         value=5, min=0, max=50, step=1,
         description="היגדים חזקים (≥0.75):",
-        style={'description_width': 'initial'},
+        style={'description_width': '180px', 'font_family': _font_family},
         layout=widgets.Layout(width="80%")
     )
 
     num_medium = widgets.IntSlider(
         value=5, min=0, max=50, step=1,
         description="היגדים בינוניים (0.70–0.749):",
-        style={'description_width': 'initial'},
+        style={'description_width': '220px', 'font_family': _font_family},
         layout=widgets.Layout(width="80%")
     )
 
@@ -362,8 +386,8 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
         disabled=True
     )
 
-    output_area = widgets.Output()  # כאן יוצגו התוצאות
-    status_area = widgets.Output()  # הודעת "מתחיל ניתוח…"
+    output_area = widgets.Output()
+    status_area = widgets.Output()
 
     # משתנה שיחזיק את האנלייזר האחרון לייצוא אקסל
     current_analyzer: Optional[SeedSentenceAnalyzer] = None
@@ -377,13 +401,12 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
 
         with status_area:
             clear_output()
-            print("מתחיל ניתוח...")     # מוצג מיידית
+            print("מתחיל ניתוח...")
         analyze_button.disabled = True
         export_button.disabled = True
 
-        # השהיה קצרה כדי להרנדר את ההודעה לפני עיבוד כבד
-        time.sleep(0.05)
-
+        # הסרת time.sleep שגורם לבעיות ב-UI
+        
         # ולידציות
         if not seed_text.value.strip():
             with status_area:
@@ -445,25 +468,25 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
             print("מייצא לאקסל...")
         current_analyzer.export_to_excel(colab_link=colab_notebook_link)
 
-    # חיבור אירועים (handler יחיד, לא נערום מאזינים)
+    # חיבור אירועים
     analyze_button.on_click(run_analysis)
     export_button.on_click(export_excel)
 
-    # סידור RTL לכל הקומפוננטות
-    container = widgets.VBox(
-        [
-            instructions,
-            seed_text,
-            file_upload,
-            column_name,
-            num_strong,
-            num_medium,
-            widgets.HBox([analyze_button, export_button], layout=widgets.Layout(justify_content="flex-start")),
-            status_area,
-            output_area,
-        ],
-        layout=widgets.Layout(direction="rtl")  # RTL כולל לכל הצאצאים
-    )
+    # סידור הקומפוננטות - הסרת ה-RTL מה-VBox כי זה לא עובד
+    container = widgets.VBox([
+        instructions,
+        seed_text,
+        file_upload,
+        column_name,
+        num_strong,
+        num_medium,
+        widgets.HBox([analyze_button, export_button], 
+                    layout=widgets.Layout(justify_content="flex-start")),
+        status_area,
+        output_area,
+    ])
+    
     display(container)
+
 
 
