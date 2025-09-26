@@ -530,36 +530,44 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
             
             # הצגת רשימה מפורטת עם מיקומים מקוריים
             if strong or medium:
-                display(HTML(f'<div dir="rtl" style="text-align:right;font-family:{_font_family};margin:15px 0;"><h4>רשימה מפורטת:</h4></div>'))
-                
-                # יצירת DataFrame מפורט
-                detailed_results = []
-                
-                # הוספת היגדים חזקים
-                for i, (original_idx, sentence, score) in enumerate(strong[:num_strong.value]):
-                    detailed_results.append({
-                        'דירוג כללי': i + 1,
-                        'קטגוריה': 'חזק',
-                        'ציון דמיון': f"{score:.4f}",
-                        'מיקום מקורי בקובץ': original_idx + 1,
-                        'היגד': sentence
-                    })
-                
-                # הוספת היגדים בינוניים
-                for i, (original_idx, sentence, score) in enumerate(medium[:num_medium.value]):
-                    detailed_results.append({
-                        'דירוג כללי': len(strong[:num_strong.value]) + i + 1,
-                        'קטגוריה': 'בינוני',
-                        'ציון דמיון': f"{score:.4f}",
-                        'מיקום מקורי בקובץ': original_idx + 1,
-                        'היגד': sentence
-                    })
-                
-                if detailed_results:
-                    detailed_df = pd.DataFrame(detailed_results)
+                # הצגת היגדים חזקים
+                if strong and num_strong.value > 0:
+                    display(HTML(f'<div dir="rtl" style="text-align:right;font-family:{_font_family};margin:20px 0 10px 0;"><h4 style="color:#2e7d32;">היגדים דומים מאוד (≥0.75):</h4></div>'))
+                    
+                    strong_results = []
+                    for i, (original_idx, sentence, score) in enumerate(strong[:num_strong.value]):
+                        strong_results.append({
+                            'מס\'': i + 1,
+                            'ציון דמיון': f"{score:.4f}",
+                            'שורה בקובץ המקורי': original_idx + 1,
+                            'היגד': sentence
+                        })
+                    
+                    strong_df = pd.DataFrame(strong_results)
                     display(
-                        detailed_df.style.set_table_styles([
-                            {'selector': 'th', 'props': [('text-align', 'right'), ('font-family', _font_family)]},
+                        strong_df.style.set_table_styles([
+                            {'selector': 'th', 'props': [('text-align', 'right'), ('font-family', _font_family), ('background-color', '#e8f5e8')]},
+                            {'selector': 'td', 'props': [('text-align', 'right'), ('font-family', _font_family)]}
+                        ]).hide(axis="index")
+                    )
+                
+                # הצגת היגדים בינוניים
+                if medium and num_medium.value > 0:
+                    display(HTML(f'<div dir="rtl" style="text-align:right;font-family:{_font_family};margin:20px 0 10px 0;"><h4 style="color:#f57c00;">היגדים דומים במידה בינונית (0.70–0.749):</h4></div>'))
+                    
+                    medium_results = []
+                    for i, (original_idx, sentence, score) in enumerate(medium[:num_medium.value]):
+                        medium_results.append({
+                            'מס\'': i + 1,
+                            'ציון דמיון': f"{score:.4f}",
+                            'שורה בקובץ המקורי': original_idx + 1,
+                            'היגד': sentence
+                        })
+                    
+                    medium_df = pd.DataFrame(medium_results)
+                    display(
+                        medium_df.style.set_table_styles([
+                            {'selector': 'th', 'props': [('text-align', 'right'), ('font-family', _font_family), ('background-color', '#fff3e0')]},
                             {'selector': 'td', 'props': [('text-align', 'right'), ('font-family', _font_family)]}
                         ]).hide(axis="index")
                     )
@@ -602,4 +610,5 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
     ])
     
     display(container)
+
 
