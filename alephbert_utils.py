@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 alephbert_utils.py
-נבנה מתוך המחברת "יצירת היגדים לשאלון.ipynb"
+
 פותח ע"י ד"ר ניצן אליקים
 """
 
@@ -48,78 +48,7 @@ class SeedSentenceAnalyzer:
     # ... (שאר הפונקציות שלך נשארות ללא שינוי) ...
 
 
-# הצגת הקדמה (כפי שהיה במחברת)
-def show_intro():
-    intro_html = """
-<div dir="rtl" align="right">
 
-⚡<font color=green> <b><i>פותח ע"י ד"ר ניצן אליקים. <BR>
-סרטון הסבר: <a href="https://youtu.be/tv9QXLJe2JU?feature=shared">https://youtu.be/tv9QXLJe2JU?feature=shared</a></b></i></font>
-<hr>
-
-# 📘 תקציר + קישורים
-
-- **מקור השיטה:**  
-  Hernandez & Nie (2023) מציגים מתודולוגיה לפיתוח פריטי שאלון באמצעות מודלים גנרטיביים ולאחר מכן סינון סמנטי בעזרת embeddings ו-cosine similarity, בתוספת ביקורת מומחים ואימות פסיכומטרי.  
-
-- **יישום עדכני של השיטה:**  
-  Liu et al. (2025) מפתחים סולם *אוריינות בינה מלאכותית יוצרת (GenAI)* בשיטה דומה: יצירת פריטים בעזרת AI, סינון סמנטי, ולבסוף EFA/CFA.     
-
-- **מודל embeddings בשימוש במחברת זו:**  
-  *AlephBERT* - גרסה עברית של  *BERT* המותאמת לניתוח סמנטי  
-  🔗 https://huggingface.co/imvladikon/sentence-transformers-alephbert  
-
-- חלופה מומלצת לרב־לשוניות: LaBSE (Google)  
-  🔗 https://tfhub.dev/google/LaBSE/2  
-
----
-
-# 🛠️ הסבר תמציתי של שלבי העבודה (יישום בשאלון)
-
-## 1. הגדרת מבנה ו-Seed
-- הגדר/י את הממדים התיאורטיים של המשתנה.  
-- נסח/י משפט מייצג (seed) קצר וברור לכל ממד.  
-**→ את המשפט הזה יש להקליד בטופס למטה במקום המתאים**
-
-## 2. הפקה גנרטיבית של פריטים
-- הפק/י מגוון רחב של וריאציות פריטים לכל seed באמצעות מודל גנרטיבי (LLM) כמו קלוד או ג'י.פי.טי.  
-- מטרה: כיסוי רחב של המשמעות, לא נוסח "מושלם" בשלב זה.
-
-## 3. המרה ל-Embeddings
-- המר/י כל פריט (וגם את ה-seed) ל-sentence embeddings בעזרת מודל מתאים (AlephBERT במחברת זו).
-
-## 4. סינון סמנטי אוטומטי ← **זה מה שהמחברת הזו עושה!**
-- חשב/י cosine similarity בין כל פריט ל-seed שלו.  
-- קבע/י סף (≈ 0.70–0.75 מקובל) לשמירת פריטים קרובים במשמעות.  
-- הרחבות ביניים נשקלות תיאורטית; רחוקים נפסלים.
-
-## 5. ביקורת מומחים ו"שיוף" ניסוחי
-- מומחי תחום מסננים כפילויות, מתקנים ניסוחים, בודקים התאמה תרבותית/אתית.  
-- שמירה על כיסוי מושגי מאוזן לכל תת-ממד.
-
-## 6. אימות פסיכומטרי
-- אסוף/י נתונים אמפיריים.  
-- הרץ/י **EFA/CFA** ומהימנות פנימית (**Cronbach's α**).  
-- אשר/י את מבנה הממדים ואת איכות הפריטים.  
-- במידת הצורך: בצע/י קיצור סולם על בסיס עומסי גורם ותפקוד פריט.
-
----
-
-# 📚 מקורות מרכזיים
-</div>
-
-<div dir="ltr" align="left">
-
-Hernandez, I., & Nie, W. (2023). The AI-IP: Minimizing the guesswork of personality scale item development through artificial intelligence. Personnel Psychology, 76(4), 1011–1035. 📄 DOI: https://doi.org/10.1111/peps.12543  
-
-Liu, X., Zhang, L., & Wei, X. (2025). Generative Artificial Intelligence Literacy: Scale Development and Its Effect on Job Performance. Behavioral Sciences, 15(6), 811. 🌐 קישור פתוח: https://doi.org/10.3390/bs15060811  
-
-- מודל AlephBERT: https://huggingface.co/imvladikon/sentence-transformers-alephbert  
-- חלופה: LaBSE (Google) https://tfhub.dev/google/LaBSE/2  
-
-</div>
-"""
-    display(HTML(intro_html))
 
 
 # טופס אינטראקטיבי (ipywidgets)
@@ -199,3 +128,4 @@ def create_analysis_form():
         seed_text, file_upload, column_name, num_strong, num_medium, analyze_button
     ])
     display(form)
+
