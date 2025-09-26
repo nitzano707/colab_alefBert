@@ -5,6 +5,7 @@ alephbert_utils.py
 פותח ע"י ד"ר ניצן אליקים | elyakim@talpiot.ac.il
 """
 
+
 import os
 import time
 import warnings
@@ -463,3 +464,4 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
         layout=widgets.Layout(direction="rtl")  # RTL כולל לכל הצאצאים
     )
     display(container)
+
