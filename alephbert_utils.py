@@ -256,7 +256,7 @@ class SeedSentenceAnalyzer:
         plt.show()
 
     # ---------- ייצוא ----------
-    def export_to_excel(self, colab_link: str = "https://colab.research.google.com/"):
+    def export_to_excel(self, colab_link: str = "https://colab.research.google.com/drive/1qcRyp3LSKiQcj05_upb6rZBeZAojnkpt?usp=sharing"):
         if self.df is None:
             print("❌ אין נתונים לייצוא")
             return
@@ -275,7 +275,7 @@ class SeedSentenceAnalyzer:
             ws.write("B1", self.seed_sentence, bold)
 
             # שורה 2: נוצר ע"י COLAB
-            ws.write("A2", f"קובץ זה נוצר ע\"י מחברת COLAB: {colab_link}")
+            ws.write("A2", f"קובץ זה נוצר ע\"י מחברת קולאב: {colab_link}")
 
             # רווח שורה
             ws.write("A3", "")
@@ -628,3 +628,4 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
     ])
     
     display(container)
+
