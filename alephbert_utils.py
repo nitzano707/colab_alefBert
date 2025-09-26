@@ -42,14 +42,15 @@ class SeedSentenceAnalyzer:
         self.sentences = []
         self.similarities = []
         self.df = None
-        print("==============================================")
-        print("elyakim@talpiot.ac.il - פותח ע\"י: ד\"ר ניצן אליקים")
-        print("==============================================")
+       
         print(f"🌱 משפט הזרע: \"{self.seed_sentence}\"")
         print(f"🤖 מודל: {self.model_name}")
 
     def load_sentences_from_csv(self, csv_path, sentence_column='sentence'):
         try:
+             print("==============================================")
+            print("elyakim@talpiot.ac.il - פותח ע\"י: ד\"ר ניצן אליקים")
+            print("==============================================")
             self.df = pd.read_csv(csv_path, encoding='utf-8')
             print(f"📂 קובץ CSV נטען עם {len(self.df)} שורות")
 
@@ -271,4 +272,5 @@ def create_analysis_form():
         seed_text, file_upload, column_name, num_strong, num_medium, analyze_button
     ])
     display(form)
+
 
