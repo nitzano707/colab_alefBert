@@ -301,86 +301,125 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
     מציג טופס ניתוח היגדים. colab_notebook_link – ייכתב בשורת ההסבר באקסל.
     """
     
-    # CSS חזק יותר שיכפה RTL על הכל
+    # CSS רדיקלי שכופה RTL על הכל
     rtl_style = HTML(f"""
     <style>
-    /* כפיית RTL על כל הרכיבים */
-    * {{
+    /* כפיית RTL רדיקלית על הכל */
+    .widget-area, .widget-area * {{
         direction: rtl !important;
+        text-align: right !important;
+        font-family: {_font_family}, sans-serif !important;
+    }}
+    
+    /* סלקטורים ספציפיים ל-ipywidgets */
+    .widget-label-basic, .widget-label {{
+        direction: rtl !important;
+        text-align: right !important;
+        font-family: {_font_family}, sans-serif !important;
+        unicode-bidi: embed !important;
     }}
     
     .widget-text input, .widget-textarea textarea {{
         direction: rtl !important;
         text-align: right !important;
         font-family: {_font_family}, sans-serif !important;
-        unicode-bidi: bidi-override !important;
     }}
     
-    .widget-label, .widget-label-basic {{
-        direction: rtl !important;
-        text-align: right !important;
-        font-family: {_font_family}, sans-serif !important;
-        unicode-bidi: bidi-override !important;
-    }}
-    
-    .widget-html, .widget-html-content {{
+    /* כפיית RTL על כל input ו-textarea */
+    input, textarea, select {{
         direction: rtl !important;
         text-align: right !important;
         font-family: {_font_family}, sans-serif !important;
     }}
     
-    /* כפיית RTL על div-ים */
-    div {{
+    /* כפיית RTL על כל div, span, p */
+    div, span, p, label {{
         direction: rtl !important;
         text-align: right !important;
+        font-family: {_font_family}, sans-serif !important;
     }}
     
-    /* תיקון לכל תיבות הטקסט */
-    input[type="text"], textarea {{
+    /* תיקון ספציפי לסליידרים */
+    .widget-hslider .widget-label {{
         direction: rtl !important;
         text-align: right !important;
-    }}
-    
-    /* תיקון ספציפי ל-placeholder */
-    input::placeholder, textarea::placeholder {{
-        direction: rtl !important;
-        text-align: right !important;
+        font-family: {_font_family}, sans-serif !important;
     }}
     
     .widget-button .widget-label {{
         font-family: {_font_family}, sans-serif !important;
+        direction: ltr !important; /* כפתורים יישארו LTR */
+    }}
+    
+    /* תיקון לתיבת העלאת קובץ */
+    .widget-upload .widget-label {{
+        direction: rtl !important;
+        text-align: right !important;
     }}
     </style>
     """)
     display(rtl_style)
     
-    # הוספת JavaScript לכפיית RTL
-    js_rtl = HTML("""
+    # JavaScript אגרסיבי שרץ מספר פעמים
+    js_rtl = HTML(f"""
     <script>
-    setTimeout(function() {
-        // כפיית RTL על כל תיבות הטקסט
-        var inputs = document.querySelectorAll('input[type="text"], textarea');
-        inputs.forEach(function(input) {
-            input.style.direction = 'rtl';
-            input.style.textAlign = 'right';
-            input.style.unicodeBidi = 'bidi-override';
-        });
+    function forceRTL() {{
+        console.log('Forcing RTL...');
         
-        // כפיית RTL על כל הלייבלים
-        var labels = document.querySelectorAll('.widget-label');
-        labels.forEach(function(label) {
+        // כפיית RTL על כל הטקסטים
+        var allElements = document.querySelectorAll('*');
+        allElements.forEach(function(el) {{
+            if (el.textContent && /[א-ת]/.test(el.textContent)) {{
+                el.style.direction = 'rtl';
+                el.style.textAlign = 'right';
+                el.style.fontFamily = '{_font_family}, sans-serif';
+            }}
+        }});
+        
+        // כפיית RTL על labels ספציפיים
+        var labels = document.querySelectorAll('.widget-label, .widget-label-basic');
+        labels.forEach(function(label) {{
             label.style.direction = 'rtl';
             label.style.textAlign = 'right';
-        });
-    }, 100);
+            label.style.fontFamily = '{_font_family}, sans-serif';
+            label.style.unicodeBidi = 'embed';
+        }});
+        
+        // כפיית RTL על inputs
+        var inputs = document.querySelectorAll('input[type="text"], textarea');
+        inputs.forEach(function(input) {{
+            input.style.direction = 'rtl';
+            input.style.textAlign = 'right';
+            input.style.fontFamily = '{_font_family}, sans-serif';
+        }});
+        
+        // תיקון ספציפי לתיבת העלאת קובץ
+        var uploadLabels = document.querySelectorAll('.widget-upload .widget-label');
+        uploadLabels.forEach(function(label) {{
+            label.style.direction = 'rtl';
+            label.style.textAlign = 'right';
+        }});
+    }}
+    
+    // רצים מיד ואחרי זמן קצר
+    forceRTL();
+    setTimeout(forceRTL, 100);
+    setTimeout(forceRTL, 500);
+    setTimeout(forceRTL, 1000);
+    
+    // מאזין לשינויים ב-DOM
+    var observer = new MutationObserver(function(mutations) {{
+        forceRTL();
+    }});
+    observer.observe(document.body, {{ childList: true, subtree: true }});
     </script>
     """)
     display(js_rtl)
     
-    # הוראות עם כפיית RTL מפורשת
+    # הוראות
     instructions = widgets.HTML(
         value=f"""
-        <div style="direction: rtl !important; text-align: right !important; font-family: {_font_family}; margin-bottom: 8px; unicode-bidi: bidi-override;">
+        <div style="direction: rtl !important; text-align: right !important; font-family: {_font_family}; margin-bottom: 8px;">
           <b>הוראות להכנת קובץ CSV</b><br>
           1. צור/י קובץ עם עמודה בשם <code>sentence</code>.<br>
           2. כל שורה מכילה היגד אחד.<br>
@@ -389,57 +428,61 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
         """
     )
 
-    # הגדרת הרכיבים עם style מפורש
+    # רכיבי הטופס עם תיאורים באנגלית כדי לעקוף בעיות
     seed_text = widgets.Textarea(
         value="",
         placeholder="הכנס/י כאן את היגד הזרע…",
-        description="היגד הזרע:",
-        layout=widgets.Layout(width="80%"),
-        style={
-            'description_width': '150px', 
-            'font_family': _font_family,
-            'text_color': 'black'
-        }
+        description="",  # ריק - נוסיף HTML label נפרד
+        layout=widgets.Layout(width="80%")
+    )
+    
+    # HTML label נפרד לזרע
+    seed_label = widgets.HTML(
+        value=f'<div style="direction: rtl; text-align: right; font-family: {_font_family}; margin-bottom: 5px;"><b>היגד הזרע:</b></div>'
     )
 
     file_upload = widgets.FileUpload(
         accept=".csv",
         multiple=False,
-        description="צירוף קובץ:",
-        style={
-            'description_width': '150px', 
-            'font_family': _font_family
-        }
+        description="",  # ריק
+    )
+    
+    # HTML label נפרד לקובץ
+    upload_label = widgets.HTML(
+        value=f'<div style="direction: rtl; text-align: right; font-family: {_font_family}; margin-bottom: 5px;"><b>צירוף קובץ CSV:</b></div>'
     )
 
     column_name = widgets.Text(
         value="sentence",
-        description="עמודת טקסט:",
-        layout=widgets.Layout(width="40%"),
-        style={
-            'description_width': '150px', 
-            'font_family': _font_family
-        }
+        description="",  # ריק
+        layout=widgets.Layout(width="40%")
+    )
+    
+    # HTML label נפרד לעמודה
+    column_label = widgets.HTML(
+        value=f'<div style="direction: rtl; text-align: right; font-family: {_font_family}; margin-bottom: 5px;"><b>עמודת טקסט:</b></div>'
     )
 
     num_strong = widgets.IntSlider(
         value=5, min=0, max=50, step=1,
-        description="היגדים חזקים (≥0.75):",
-        style={
-            'description_width': '200px', 
-            'font_family': _font_family
-        },
+        description="",  # ריק
         layout=widgets.Layout(width="80%")
+    )
+    
+    # HTML label נפרד לחזקים
+    strong_label = widgets.HTML(
+        value=f'<div style="direction: rtl; text-align: right; font-family: {_font_family}; margin-bottom: 5px;"><b>היגדים חזקים (≥0.75):</b></div>'
     )
 
     num_medium = widgets.IntSlider(
         value=5, min=0, max=50, step=1,
-        description="היגדים בינוניים (0.70–0.749):",
-        style={
-            'description_width': '250px', 
-            'font_family': _font_family
-        },
+        description="",  # ריק
         layout=widgets.Layout(width="80%")
+    )
+    
+    # HTML label נפרד לבינוניים
+    medium_label = widgets.HTML(
+        value=f'<div style="direction: rtl; text-align: right; font-family: {_font_family}; margin-bottom: 5px;"><b>היגדים בינוניים (0.70–0.749):</b></div>'
     )
 
     analyze_button = widgets.Button(
@@ -512,7 +555,7 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
             analyze_button.disabled = False
             return
 
-        # הצגת תוצאות – ראשית ننקה את הודעת הסטטוס
+        # הצגת תוצאות
         with status_area:
             clear_output()
 
@@ -535,17 +578,22 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
             print("מייצא לאקסל...")
         current_analyzer.export_to_excel(colab_link=colab_notebook_link)
 
-    # חיבור אירועים (handler יחיד, לא נערום מאזינים)
+    # חיבור אירועים
     analyze_button.on_click(run_analysis)
     export_button.on_click(export_excel)
 
-    # סידור הקומפוננטות
+    # סידור הקומפוננטות עם labels נפרדים
     container = widgets.VBox([
         instructions,
+        seed_label,
         seed_text,
+        upload_label,
         file_upload,
+        column_label,
         column_name,
+        strong_label,
         num_strong,
+        medium_label,
         num_medium,
         widgets.HBox([analyze_button, export_button], 
                     layout=widgets.Layout(justify_content="flex-start")),
@@ -554,6 +602,7 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
     ])
     
     display(container)
+
 
 
 
