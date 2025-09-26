@@ -296,7 +296,7 @@ class SeedSentenceAnalyzer:
 # ------------------------------------------------------------
 # טופס אינטראקטיבי (UI)
 # ------------------------------------------------------------
-def create_analysis_form(colab_notebook_link: str = "https://colab.research.google.com/"):
+def create_analysis_form(colab_notebook_link: str = "https://colab.research.google.com/drive/1qcRyp3LSKiQcj05_upb6rZBeZAojnkpt?usp=sharing"):
     """
     מציג טופס ניתוח היגדים. colab_notebook_link – ייכתב בשורת ההסבר באקסל.
     """
@@ -628,4 +628,5 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
     ])
     
     display(container)
+
 
