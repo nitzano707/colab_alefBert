@@ -42,8 +42,9 @@ class SeedSentenceAnalyzer:
         self.sentences = []
         self.similarities = []
         self.df = None
-        print(f"פותח ע"י ד``ר ניצן אליקים")
-        print(f"--------------------")
+        print("==============================================")
+        print("elyakim@talpiot.ac.il - פותח ע\"י: ד\"ר ניצן אליקים")
+        print("==============================================")
         print(f"🌱 משפט הזרע: \"{self.seed_sentence}\"")
         print(f"🤖 מודל: {self.model_name}")
 
@@ -270,3 +271,4 @@ def create_analysis_form():
         seed_text, file_upload, column_name, num_strong, num_medium, analyze_button
     ])
     display(form)
+
