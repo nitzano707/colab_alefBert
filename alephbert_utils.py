@@ -301,16 +301,17 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
     מציג טופס ניתוח היגדים. colab_notebook_link – ייכתב בשורת ההסבר באקסל.
     """
     # הוראות קצרות
-    instructions = HTML(
-        f"""
-        <div dir="rtl" style="text-align:right;font-family:{_font_family};margin-bottom:8px;">
+    instructions = widgets.HTML(
+    value="""
+        <div dir="rtl" style="text-align:right;font-family:Arial;margin-bottom:8px;">
           <b>הוראות להכנת קובץ CSV</b><br>
           1. צור/י קובץ עם עמודה בשם <code>sentence</code>.<br>
           2. כל שורה מכילה היגד אחד.<br>
           3. שמור/שמרי את הקובץ בקידוד UTF-8.
         </div>
-        """
-    )
+    """
+)
+
 
     seed_text = widgets.Textarea(
         value="",
@@ -464,4 +465,5 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
         layout=widgets.Layout(direction="rtl")  # RTL כולל לכל הצאצאים
     )
     display(container)
+
 
