@@ -548,7 +548,7 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
             if strong or medium:
                 # הצגת היגדים חזקים
                 if strong and num_strong.value > 0:
-                    display(HTML(f'<div dir="rtl" style="text-align:right;font-family:{_font_family};margin:20px 0 10px 0;"><h4 style="color:#2e7d32;">היגדים דומים מאוד (≥0.75):</h4></div>'))
+                    display(HTML(f'<div dir="rtl" style="text-align:right;font-family:{_font_family};margin:20px 0 10px 0; width:100%;"><h4 style="color:#2e7d32; text-align:right; direction:rtl;">היגדים דומים מאוד (≥0.75):</h4></div>'))
                     
                     strong_results = []
                     for i, (original_idx, sentence, score) in enumerate(strong[:num_strong.value]):
@@ -562,14 +562,15 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
                     strong_df = pd.DataFrame(strong_results)
                     display(
                         strong_df.style.set_table_styles([
-                            {'selector': 'th', 'props': [('text-align', 'right'), ('font-family', _font_family), ('background-color', '#e8f5e8')]},
-                            {'selector': 'td', 'props': [('text-align', 'right'), ('font-family', _font_family)]}
+                            {'selector': 'th', 'props': [('text-align', 'right'), ('font-family', _font_family), ('background-color', '#e8f5e8'), ('direction', 'rtl')]},
+                            {'selector': 'td', 'props': [('text-align', 'right'), ('font-family', _font_family), ('direction', 'rtl')]},
+                            {'selector': 'table', 'props': [('direction', 'rtl'), ('width', '100%'), ('margin-right', '0'), ('margin-left', 'auto'), ('float', 'right')]}
                         ]).hide(axis="index")
                     )
                 
                 # הצגת היגדים בינוניים
                 if medium and num_medium.value > 0:
-                    display(HTML(f'<div dir="rtl" style="text-align:right;font-family:{_font_family};margin:20px 0 10px 0;"><h4 style="color:#f57c00;">היגדים דומים במידה בינונית (0.70–0.749):</h4></div>'))
+                    display(HTML(f'<div dir="rtl" style="text-align:right;font-family:{_font_family};margin:20px 0 10px 0; width:100%;"><h4 style="color:#f57c00; text-align:right; direction:rtl;">היגדים דומים במידה בינונית (0.70–0.749):</h4></div>'))
                     
                     medium_results = []
                     for i, (original_idx, sentence, score) in enumerate(medium[:num_medium.value]):
@@ -583,8 +584,9 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
                     medium_df = pd.DataFrame(medium_results)
                     display(
                         medium_df.style.set_table_styles([
-                            {'selector': 'th', 'props': [('text-align', 'right'), ('font-family', _font_family), ('background-color', '#fff3e0')]},
-                            {'selector': 'td', 'props': [('text-align', 'right'), ('font-family', _font_family)]}
+                            {'selector': 'th', 'props': [('text-align', 'right'), ('font-family', _font_family), ('background-color', '#fff3e0'), ('direction', 'rtl')]},
+                            {'selector': 'td', 'props': [('text-align', 'right'), ('font-family', _font_family), ('direction', 'rtl')]},
+                            {'selector': 'table', 'props': [('direction', 'rtl'), ('width', '100%'), ('margin-right', '0'), ('margin-left', 'auto'), ('float', 'right')]}
                         ]).hide(axis="index")
                     )
             
