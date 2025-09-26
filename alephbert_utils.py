@@ -301,34 +301,86 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
     מציג טופס ניתוח היגדים. colab_notebook_link – ייכתב בשורת ההסבר באקסל.
     """
     
-    # הוספת CSS לתיקון RTL ב-Colab
-    rtl_style = HTML("""
+    # CSS חזק יותר שיכפה RTL על הכל
+    rtl_style = HTML(f"""
     <style>
-    .widget-text input, .widget-textarea textarea {
+    /* כפיית RTL על כל הרכיבים */
+    * {{
+        direction: rtl !important;
+    }}
+    
+    .widget-text input, .widget-textarea textarea {{
         direction: rtl !important;
         text-align: right !important;
-        font-family: Arial, 'DejaVu Sans', sans-serif !important;
-    }
-    .widget-label {
+        font-family: {_font_family}, sans-serif !important;
+        unicode-bidi: bidi-override !important;
+    }}
+    
+    .widget-label, .widget-label-basic {{
         direction: rtl !important;
         text-align: right !important;
-        font-family: Arial, 'DejaVu Sans', sans-serif !important;
-    }
-    .widget-html {
+        font-family: {_font_family}, sans-serif !important;
+        unicode-bidi: bidi-override !important;
+    }}
+    
+    .widget-html, .widget-html-content {{
         direction: rtl !important;
         text-align: right !important;
-    }
-    .widget-button .widget-label {
-        font-family: Arial, 'DejaVu Sans', sans-serif !important;
-    }
+        font-family: {_font_family}, sans-serif !important;
+    }}
+    
+    /* כפיית RTL על div-ים */
+    div {{
+        direction: rtl !important;
+        text-align: right !important;
+    }}
+    
+    /* תיקון לכל תיבות הטקסט */
+    input[type="text"], textarea {{
+        direction: rtl !important;
+        text-align: right !important;
+    }}
+    
+    /* תיקון ספציפי ל-placeholder */
+    input::placeholder, textarea::placeholder {{
+        direction: rtl !important;
+        text-align: right !important;
+    }}
+    
+    .widget-button .widget-label {{
+        font-family: {_font_family}, sans-serif !important;
+    }}
     </style>
     """)
     display(rtl_style)
     
-    # הוראות קצרות
+    # הוספת JavaScript לכפיית RTL
+    js_rtl = HTML("""
+    <script>
+    setTimeout(function() {
+        // כפיית RTL על כל תיבות הטקסט
+        var inputs = document.querySelectorAll('input[type="text"], textarea');
+        inputs.forEach(function(input) {
+            input.style.direction = 'rtl';
+            input.style.textAlign = 'right';
+            input.style.unicodeBidi = 'bidi-override';
+        });
+        
+        // כפיית RTL על כל הלייבלים
+        var labels = document.querySelectorAll('.widget-label');
+        labels.forEach(function(label) {
+            label.style.direction = 'rtl';
+            label.style.textAlign = 'right';
+        });
+    }, 100);
+    </script>
+    """)
+    display(js_rtl)
+    
+    # הוראות עם כפיית RTL מפורשת
     instructions = widgets.HTML(
         value=f"""
-        <div dir="rtl" style="text-align:right;font-family:{_font_family};margin-bottom:8px;">
+        <div style="direction: rtl !important; text-align: right !important; font-family: {_font_family}; margin-bottom: 8px; unicode-bidi: bidi-override;">
           <b>הוראות להכנת קובץ CSV</b><br>
           1. צור/י קובץ עם עמודה בשם <code>sentence</code>.<br>
           2. כל שורה מכילה היגד אחד.<br>
@@ -337,39 +389,56 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
         """
     )
 
+    # הגדרת הרכיבים עם style מפורש
     seed_text = widgets.Textarea(
         value="",
         placeholder="הכנס/י כאן את היגד הזרע…",
         description="היגד הזרע:",
         layout=widgets.Layout(width="80%"),
-        style={'description_width': '120px', 'font_family': _font_family}
+        style={
+            'description_width': '150px', 
+            'font_family': _font_family,
+            'text_color': 'black'
+        }
     )
 
     file_upload = widgets.FileUpload(
         accept=".csv",
         multiple=False,
         description="צירוף קובץ:",
-        style={'description_width': '120px', 'font_family': _font_family}
+        style={
+            'description_width': '150px', 
+            'font_family': _font_family
+        }
     )
 
     column_name = widgets.Text(
         value="sentence",
         description="עמודת טקסט:",
         layout=widgets.Layout(width="40%"),
-        style={'description_width': '120px', 'font_family': _font_family}
+        style={
+            'description_width': '150px', 
+            'font_family': _font_family
+        }
     )
 
     num_strong = widgets.IntSlider(
         value=5, min=0, max=50, step=1,
         description="היגדים חזקים (≥0.75):",
-        style={'description_width': '180px', 'font_family': _font_family},
+        style={
+            'description_width': '200px', 
+            'font_family': _font_family
+        },
         layout=widgets.Layout(width="80%")
     )
 
     num_medium = widgets.IntSlider(
         value=5, min=0, max=50, step=1,
         description="היגדים בינוניים (0.70–0.749):",
-        style={'description_width': '220px', 'font_family': _font_family},
+        style={
+            'description_width': '250px', 
+            'font_family': _font_family
+        },
         layout=widgets.Layout(width="80%")
     )
 
@@ -405,8 +474,6 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
         analyze_button.disabled = True
         export_button.disabled = True
 
-        # הסרת time.sleep שגורם לבעיות ב-UI
-        
         # ולידציות
         if not seed_text.value.strip():
             with status_area:
@@ -445,7 +512,7 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
             analyze_button.disabled = False
             return
 
-        # הצגת תוצאות – ראשית ננקה את הודעת הסטטוס
+        # הצגת תוצאות – ראשית ننקה את הודעת הסטטוס
         with status_area:
             clear_output()
 
@@ -468,11 +535,11 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
             print("מייצא לאקסל...")
         current_analyzer.export_to_excel(colab_link=colab_notebook_link)
 
-    # חיבור אירועים
+    # חיבור אירועים (handler יחיד, לא נערום מאזינים)
     analyze_button.on_click(run_analysis)
     export_button.on_click(export_excel)
 
-    # סידור הקומפוננטות - הסרת ה-RTL מה-VBox כי זה לא עובד
+    # סידור הקומפוננטות
     container = widgets.VBox([
         instructions,
         seed_text,
@@ -487,6 +554,7 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
     ])
     
     display(container)
+
 
 
 
