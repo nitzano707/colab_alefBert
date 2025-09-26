@@ -525,8 +525,24 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
             clear_output()
             analyzer.show_header()
             
-            # קבלת התוצאות המפורטות
-            strong, medium, weak, all_matches = analyzer.display_results(num_strong.value, num_medium.value)
+            # קבלת התוצאות המפורטות ללא הצגת הטבלה המשולבת
+            all_matches = [(i, s, sc) for i, (s, sc) in enumerate(zip(analyzer.sentences, analyzer.similarities))]
+            all_matches.sort(key=lambda x: x[2], reverse=True)
+
+            strong = [m for m in all_matches if m[2] >= 0.75]
+            medium = [m for m in all_matches if 0.70 <= m[2] < 0.75]
+            weak = [m for m in all_matches if m[2] < 0.70]
+
+            # הצגת סיכום מילולי בלבד
+            summary_html = f"""
+            <div dir="rtl" style="text-align:right;font-family:{_font_family};margin:6px 0 12px 0;">
+              נמצאו <b>{len(strong)}</b> היגדים דומים מאוד (≥0.75),
+              <b>{len(medium)}</b> היגדים דומים במידה בינונית (0.70–0.749),
+              ו־<b>{len(weak)}</b> היגדים רחוקים במשמעות.
+              סה"כ נותחו <b>{len(all_matches)}</b> היגדים.
+            </div>
+            """
+            display(HTML(summary_html))
             
             # הצגת רשימה מפורטת עם מיקומים מקוריים
             if strong or medium:
@@ -610,5 +626,6 @@ def create_analysis_form(colab_notebook_link: str = "https://colab.research.goog
     ])
     
     display(container)
+
 
 
