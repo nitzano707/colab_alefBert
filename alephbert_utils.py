@@ -48,9 +48,7 @@ class SeedSentenceAnalyzer:
 
     def load_sentences_from_csv(self, csv_path, sentence_column='sentence'):
         try:
-             print("==============================================")
-            print("elyakim@talpiot.ac.il - פותח ע\"י: ד\"ר ניצן אליקים")
-            print("==============================================")
+           
             self.df = pd.read_csv(csv_path, encoding='utf-8')
             print(f"📂 קובץ CSV נטען עם {len(self.df)} שורות")
 
@@ -264,6 +262,9 @@ def create_analysis_form():
             return
         analyzer.display_results(num_strong.value, num_medium.value)
         analyzer.create_visualizations()
+        print("==============================================")
+        print("elyakim@talpiot.ac.il - פותח ע\"י: ד\"ר ניצן אליקים")
+        print("==============================================")
         print("\n🎉 הניתוח הושלם בהצלחה!")
 
     analyze_button.on_click(on_analyze_clicked)
@@ -272,5 +273,6 @@ def create_analysis_form():
         seed_text, file_upload, column_name, num_strong, num_medium, analyze_button
     ])
     display(form)
+
 
 
