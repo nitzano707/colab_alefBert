@@ -2,7 +2,7 @@
 """
 alephbert_utils.py
 
-פותח ע"י ד"ר ניצן אליקים | elyakim@talpiot.ac.il
+פותח ע"י ד"ר ניצן אליקים
 """
 
 import pandas as pd
@@ -31,8 +31,7 @@ def fix_hebrew_text(text):
 plt.rcParams['figure.figsize'] = (14, 10)
 plt.rcParams['axes.unicode_minus'] = False
 sns.set_style("whitegrid")
-plt.rcParams['font.family'] = 'DejaVu Sans'
-
+plt.rcParams['font.family'] = 'Arial'
 
 # מחלקת ניתוח
 class SeedSentenceAnalyzer:
@@ -47,11 +46,9 @@ class SeedSentenceAnalyzer:
     def load_sentences_from_csv(self, csv_path, sentence_column='sentence'):
         try:
             self.df = pd.read_csv(csv_path, encoding='utf-8')
-            print("\u202B📂 קובץ CSV נטען עם", len(self.df), "שורות\u202C")
-
             if sentence_column not in self.df.columns:
-                print("\u202B❌ עמודה '" + sentence_column + "' לא נמצאה\u202C")
-                print("\u202B📋 עמודות זמינות:", list(self.df.columns), "\u202C")
+                print(f"❌ עמודה '{sentence_column}' לא נמצאה")
+                print(f"📋 עמודות זמינות: {list(self.df.columns)}")
                 return None
 
             self.df = self.df.dropna(subset=[sentence_column])
@@ -60,22 +57,14 @@ class SeedSentenceAnalyzer:
             self.df = self.df.reset_index(drop=True)
 
             self.sentences = self.df[sentence_column].tolist()
-            print("\u202B✅ נטענו " + str(len(self.sentences)) + " משפטים תקינים\u202C")
-
-            print("\u202B📝 דוגמה ממשפטים שנטענו:\u202C")
-            for i, sentence in enumerate(self.sentences[:5], 1):
-                print("\u202B" + f"{i:2d}. {sentence}" + "\u202C")
-            if len(self.sentences) > 5:
-                print("\u202B... ועוד " + str(len(self.sentences) - 5) + " משפטים\u202C")
-
             return self.df
         except Exception as e:
-            print("\u202B❌ שגיאה בטעינת הקובץ:", e, "\u202C")
+            print(f"❌ שגיאה בטעינת הקובץ: {e}")
             return None
 
     def calculate_similarities_to_seed(self):
         if not self.sentences:
-            print("\u202B❌ אין משפטים לעיבוד. טען קובץ CSV קודם.\u202C")
+            print("❌ אין היגדים לעיבוד. טען קובץ CSV קודם.")
             return None
 
         try:
@@ -89,10 +78,14 @@ class SeedSentenceAnalyzer:
 
             return self.similarities
         except Exception as e:
-            print("\u202B❌ שגיאה בחישוב דמיון:", e, "\u202C")
+            print(f"❌ שגיאה בחישוב דמיון: {e}")
             return None
 
     def display_results(self, num_strong=5, num_medium=5):
+        if not self.similarities:
+            print("❌ עדיין לא חושבו ציונים")
+            return None
+
         all_matches = [(i, sentence, score) for i, (sentence, score) in enumerate(zip(self.sentences, self.similarities))]
         all_matches.sort(key=lambda x: x[2], reverse=True)
 
@@ -100,37 +93,40 @@ class SeedSentenceAnalyzer:
         medium = [m for m in all_matches if 0.70 <= m[2] < 0.75]
         weak = [m for m in all_matches if m[2] < 0.70]
 
-        # כותרת מעוצבת בראש הניתוח
-        display(HTML(f"""
-        <div dir="rtl" align="right" style="border:2px solid #4CAF50; padding:10px; margin:10px 0; font-family:Arial;">
-        <h3>📊 תוצאות ניתוח</h3>
-        <b>פותח ע"י ד"ר ניצן אליקים | elyakim@talpiot.ac.il</b><br>
-        🌱 משפט הזרע: "{self.seed_sentence}"<br>
-        🤖 מודל: {self.model_name}
+        # כותרת ותצוגה מסודרת
+        header_html = f"""
+        <div dir="rtl" style="text-align:right; font-family:Arial; border:2px solid green; padding:10px; margin:10px 0;">
+            <h3>📊 תוצאות ניתוח</h3>
+            <p><b>פותח ע"י ד"ר ניצן אליקים | elyakim@talpiot.ac.il</b></p>
+            <p>🌱 היגד זרע: "{self.seed_sentence}"</p>
+            <p>🤖 מודל: {self.model_name}</p>
         </div>
-        """))
+        """
+        display(HTML(header_html))
 
-        # פלט טקסטואלי
-        if strong:
-            show_n = min(num_strong, len(strong))
-            print("\u202B🟢 דמיון חזק (≥0.75) | מציג " + str(show_n) + " מתוך " + str(len(strong)) + "\u202C")
-            for rank, (i, s, sc) in enumerate(strong[:show_n], 1):
-                print("\u202B" + f"#{rank:2d} | ציון: {sc:.4f}\n   📝 {s}" + "\u202C")
+        # סיכום מילולי קצר
+        summary_text = f"""
+        <div dir="rtl" style="text-align:right; font-family:Arial; padding:5px;">
+            <p>נמצאו <b>{len(strong)}</b> היגדים דומים מאוד (≥0.75), 
+            <b>{len(medium)}</b> היגדים דומים במידה בינונית (0.70–0.749),
+            ו־<b>{len(weak)}</b> היגדים רחוקים במשמעות.</p>
+            <p>סה"כ נותחו <b>{len(all_matches)}</b> היגדים.</p>
+        </div>
+        """
+        display(HTML(summary_text))
 
-        if medium:
-            show_n = min(num_medium, len(medium))
-            print("\u202B🟡 דמיון בינוני (0.70–0.749) | מציג " + str(show_n) + " מתוך " + str(len(medium)) + "\u202C")
-            for rank, (i, s, sc) in enumerate(medium[:show_n], 1):
-                print("\u202B" + f"#{rank:2d} | ציון: {sc:.4f}\n   📝 {s}" + "\u202C")
+        # טבלה עם Top-N היגדים (חזקים ובינוניים בלבד)
+        top_items = strong[:num_strong] + medium[:num_medium]
+        if top_items:
+            df_top = pd.DataFrame(
+                [(s, f"{sc:.3f}") for (_, s, sc) in top_items],
+                columns=["היגד", "ציון דמיון"]
+            )
+            display(df_top.style.set_table_styles(
+                [{'selector': 'th', 'props': [('text-align', 'right'), ('font-family', 'Arial')]}]
+            ).set_properties(**{'text-align': 'right', 'font-family': 'Arial'}))
 
-        print("\u202B--- סיכום ---\u202C")
-        print("\u202B🔥 חזק (≥0.75): " + str(len(strong)) + "\u202C")
-        print("\u202B🟡 בינוני (0.70–0.749): " + str(len(medium)) + "\u202C")
-        print("\u202B🔵 חלש (<0.70): " + str(len(weak)) + "\u202C")
-        print("\u202Bסה\"כ: " + str(len(all_matches)) + " משפטים\u202C")
-        if all_matches:
-            best_score = all_matches[0][2]
-            print("\u202B🎯 הציון הגבוה ביותר: " + f"{best_score:.4f}" + "\u202C")
+        return strong, medium, weak, all_matches
 
     def create_visualizations(self):
         scores = np.array(self.similarities)
@@ -178,15 +174,21 @@ class SeedSentenceAnalyzer:
         plt.show()
 
 
-# טופס אינטראקטיבי
+# טופס אינטראקטיבי (ipywidgets)
 def create_analysis_form():
-    display(HTML("<div dir='rtl' align='right'><h3>📋 טופס ניתוח משפטי זרע</h3></div>"))
-    print("\u202B📁 הוראות להכנת קובץ CSV:\n1. צור קובץ עם עמודה בשם 'sentence'\n2. כל שורה מכילה משפט אחד\n3. שמור את הקובץ ב-UTF-8\u202C")
+    instructions = widgets.HTML("""
+    <div dir="rtl" style="text-align:right; font-family:Arial;">
+    <b>📁 הוראות להכנת קובץ CSV:</b><br>
+    1. צור קובץ עם עמודה בשם 'sentence'<br>
+    2. כל שורה מכילה היגד אחד<br>
+    3. שמור את הקובץ ב־UTF-8
+    </div>
+    """)
 
     seed_text = widgets.Textarea(
         value='',
-        placeholder='הכנס כאן את משפט הזרע...',
-        description='משפט הזרע:',
+        placeholder='הכנס כאן את היגד הזרע...',
+        description='היגד הזרע:',
         layout=widgets.Layout(width='80%')
     )
 
@@ -204,14 +206,14 @@ def create_analysis_form():
 
     num_strong = widgets.IntSlider(
         value=5, min=0, max=50, step=1,
-        description='משפטים חזקים (≥0.75):',
+        description='היגדים חזקים (≥0.75):',
         style={'description_width': 'initial'},
         layout=widgets.Layout(width='80%')
     )
 
     num_medium = widgets.IntSlider(
         value=5, min=0, max=50, step=1,
-        description='משפטים בינוניים (0.70-0.749):',
+        description='היגדים בינוניים (0.70-0.749):',
         style={'description_width': 'initial'},
         layout=widgets.Layout(width='80%')
     )
@@ -222,52 +224,71 @@ def create_analysis_form():
         layout=widgets.Layout(width='200px', height='40px')
     )
 
+    export_button = widgets.Button(
+        description='⬇️ ייצוא לאקסל',
+        button_style='info',
+        layout=widgets.Layout(width='200px', height='40px')
+    )
+    export_button.disabled = True
+
     output_area = widgets.Output()
 
     def on_analyze_clicked(b):
         with output_area:
             clear_output()
-            print("\u202B🚀 מתחיל ניתוח...\u202C")
-        b.disabled = True
+            print("🚀 מתחיל ניתוח...")
+        analyze_button.disabled = True
 
-        try:
-            if not seed_text.value.strip():
-                with output_area:
-                    clear_output()
-                    print("\u202B❌ יש להזין משפט זרע\u202C")
-                return
-            if not file_upload.value:
-                with output_area:
-                    clear_output()
-                    print("\u202B❌ יש להעלות קובץ CSV\u202C")
-                return
-
-            uploaded_file = list(file_upload.value.values())[0]
-            filename = 'uploaded_file.csv'
-            with open(filename, 'wb') as f:
-                f.write(uploaded_file['content'])
-
-            analyzer = SeedSentenceAnalyzer(seed_text.value.strip())
-            df = analyzer.load_sentences_from_csv(filename, column_name.value)
-            if df is None:
-                return
-            similarities = analyzer.calculate_similarities_to_seed()
-            if similarities is None:
-                return
-
+        if not seed_text.value.strip():
             with output_area:
-                clear_output()  # מוחק את "🚀 מתחיל ניתוח..."
-                analyzer.display_results(num_strong.value, num_medium.value)
-                analyzer.create_visualizations()
-                print("\u202B🎉 הניתוח הושלם בהצלחה!\u202C")
+                clear_output()
+                print("❌ יש להזין היגד זרע")
+            analyze_button.disabled = False
+            return
+        if not file_upload.value:
+            with output_area:
+                clear_output()
+                print("❌ יש להעלות קובץ CSV")
+            analyze_button.disabled = False
+            return
 
-        finally:
-            b.disabled = False  # הכפתור חוזר להיות פעיל
+        uploaded_file = list(file_upload.value.values())[0]
+        filename = 'uploaded_file.csv'
+        with open(filename, 'wb') as f:
+            f.write(uploaded_file['content'])
+
+        analyzer = SeedSentenceAnalyzer(seed_text.value.strip())
+        df = analyzer.load_sentences_from_csv(filename, column_name.value)
+        if df is None:
+            analyze_button.disabled = False
+            return
+        similarities = analyzer.calculate_similarities_to_seed()
+        if similarities is None:
+            analyze_button.disabled = False
+            return
+
+        with output_area:
+            clear_output()
+            strong, medium, weak, all_matches = analyzer.display_results(num_strong.value, num_medium.value)
+            analyzer.create_visualizations()
+            print("\n🎉 הניתוח הושלם בהצלחה!")
+
+        # הפעלת כפתור ייצוא
+        def export_to_excel(btn):
+            df_out = pd.DataFrame([(s, sc) for (_, s, sc) in all_matches],
+                                  columns=["היגד", "ציון דמיון"])
+            df_out.to_excel("תוצאות_ניתוח.xlsx", index=False)
+            with output_area:
+                print("📂 קובץ 'תוצאות_ניתוח.xlsx' נוצר בתיקייה הנוכחית.")
+
+        export_button.on_click(export_to_excel)
+        export_button.disabled = False
+        analyze_button.disabled = False
 
     analyze_button.on_click(on_analyze_clicked)
 
-    rtl_box = widgets.VBox([
-        seed_text, file_upload, column_name, num_strong, num_medium, analyze_button, output_area
-    ], layout=widgets.Layout(direction='rtl', align_items='flex-end'))
-
-    display(rtl_box)
+    form = widgets.VBox([
+        instructions, seed_text, file_upload, column_name,
+        num_strong, num_medium, analyze_button, export_button, output_area
+    ])
+    display(form)
