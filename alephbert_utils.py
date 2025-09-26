@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import warnings
 import ipywidgets as widgets
-from IPython.display import display, clear_output
+from IPython.display import display
 from sentence_transformers import SentenceTransformer, util
 import bidi.algorithm
 from arabic_reshaper import reshape
@@ -43,12 +43,14 @@ class SeedSentenceAnalyzer:
         self.similarities = []
         self.df = None
        
+        print("==============================================")
+        print("elyakim@talpiot.ac.il - פותח ע\"י: ד\"ר ניצן אליקים")
+        print("==============================================")
         print(f"🌱 משפט הזרע: \"{self.seed_sentence}\"")
         print(f"🤖 מודל: {self.model_name}")
 
     def load_sentences_from_csv(self, csv_path, sentence_column='sentence'):
         try:
-           
             self.df = pd.read_csv(csv_path, encoding='utf-8')
             print(f"📂 קובץ CSV נטען עם {len(self.df)} שורות")
 
@@ -239,6 +241,9 @@ def create_analysis_form():
         layout=widgets.Layout(width='200px', height='40px')
     )
 
+    # אזור תוצאות שמצטבר מלמעלה למטה (חדש תמיד ראשון)
+    output_area = widgets.VBox([])
+
     def on_analyze_clicked(b):
         if not seed_text.value.strip():
             print("❌ יש להזין משפט זרע")
@@ -252,27 +257,27 @@ def create_analysis_form():
         with open(filename, 'wb') as f:
             f.write(uploaded_file['content'])
 
-        print("🚀 מתחיל ניתוח...")
-        analyzer = SeedSentenceAnalyzer(seed_text.value.strip())
-        df = analyzer.load_sentences_from_csv(filename, column_name.value)
-        if df is None:
-            return
-        similarities = analyzer.calculate_similarities_to_seed()
-        if similarities is None:
-            return
-        analyzer.display_results(num_strong.value, num_medium.value)
-        analyzer.create_visualizations()
-        print("==============================================")
-        print("elyakim@talpiot.ac.il - פותח ע\"י: ד\"ר ניצן אליקים")
-        print("==============================================")
-        print("\n🎉 הניתוח הושלם בהצלחה!")
+        out = widgets.Output()
+        with out:
+            print("🚀 מתחיל ניתוח...")
+            analyzer = SeedSentenceAnalyzer(seed_text.value.strip())
+            df = analyzer.load_sentences_from_csv(filename, column_name.value)
+            if df is None:
+                return
+            similarities = analyzer.calculate_similarities_to_seed()
+            if similarities is None:
+                return
+            analyzer.display_results(num_strong.value, num_medium.value)
+            analyzer.create_visualizations()
+            print("\n🎉 הניתוח הושלם בהצלחה!")
+
+        # מציגים את הניתוח האחרון בראש
+        children = list(output_area.children)
+        output_area.children = [out] + children
 
     analyze_button.on_click(on_analyze_clicked)
 
     form = widgets.VBox([
         seed_text, file_upload, column_name, num_strong, num_medium, analyze_button
     ])
-    display(form)
-
-
-
+    display(form, output_area)
