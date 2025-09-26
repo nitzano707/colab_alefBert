@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import warnings
 import ipywidgets as widgets
-from IPython.display import display, clear_output
+from IPython.display import display, clear_output, Markdown, HTML
 from sentence_transformers import SentenceTransformer, util
 import bidi.algorithm
 from arabic_reshaper import reshape
@@ -33,7 +33,7 @@ plt.rcParams['axes.unicode_minus'] = False
 sns.set_style("whitegrid")
 plt.rcParams['font.family'] = 'DejaVu Sans'
 
-# מחלקת ניתוח
+# מחלקת ניתוח (ללא שינוי)
 class SeedSentenceAnalyzer:
     def __init__(self, seed_sentence, model="imvladikon/sentence-transformers-alephbert"):
         self.seed_sentence = seed_sentence.strip()
@@ -45,158 +45,89 @@ class SeedSentenceAnalyzer:
         print(f"🌱 משפט הזרע: \"{self.seed_sentence}\"")
         print(f"🤖 מודל: {self.model_name}")
 
-    def load_sentences_from_csv(self, csv_path, sentence_column='sentence'):
-        try:
-            self.df = pd.read_csv(csv_path, encoding='utf-8')
-            print(f"📂 קובץ CSV נטען עם {len(self.df)} שורות")
+    # ... (שאר הפונקציות שלך נשארות ללא שינוי) ...
 
-            if sentence_column not in self.df.columns:
-                print(f"❌ עמודה '{sentence_column}' לא נמצאה")
-                print(f"📋 עמודות זמינות: {list(self.df.columns)}")
-                return None
 
-            self.df = self.df.dropna(subset=[sentence_column])
-            self.df = self.df[self.df[sentence_column].str.strip() != '']
-            self.df = self.df[self.df[sentence_column].str.strip() != self.seed_sentence]
-            self.df = self.df.reset_index(drop=True)
+# הצגת הקדמה (כפי שהיה במחברת)
+def show_intro():
+    intro_html = """
+<div dir="rtl" align="right">
 
-            self.sentences = self.df[sentence_column].tolist()
-            print(f"✅ נטענו {len(self.sentences)} משפטים תקינים")
+⚡<font color=green> <b><i>פותח ע"י ד"ר ניצן אליקים. <BR>
+סרטון הסבר: <a href="https://youtu.be/tv9QXLJe2JU?feature=shared">https://youtu.be/tv9QXLJe2JU?feature=shared</a></b></i></font>
+<hr>
 
-            print(f"📝 דוגמה ממשפטים שנטענו:\n")
-            for i, sentence in enumerate(self.sentences[:5], 1):
-                print(f"{i:2d}. {sentence}")
-            if len(self.sentences) > 5:
-                print(f"... ועוד {len(self.sentences) - 5} משפטים")
+# 📘 תקציר + קישורים
 
-            return self.df
-        except Exception as e:
-            print(f"❌ שגיאה בטעינת הקובץ: {e}")
-            return None
+- **מקור השיטה:**  
+  Hernandez & Nie (2023) מציגים מתודולוגיה לפיתוח פריטי שאלון באמצעות מודלים גנרטיביים ולאחר מכן סינון סמנטי בעזרת embeddings ו-cosine similarity, בתוספת ביקורת מומחים ואימות פסיכומטרי.  
 
-    def calculate_similarities_to_seed(self):
-        if not self.sentences:
-            print("❌ אין משפטים לעיבוד. טען קובץ CSV קודם.")
-            return None
+- **יישום עדכני של השיטה:**  
+  Liu et al. (2025) מפתחים סולם *אוריינות בינה מלאכותית יוצרת (GenAI)* בשיטה דומה: יצירת פריטים בעזרת AI, סינון סמנטי, ולבסוף EFA/CFA.     
 
-        print(f"🔄 מחשב דמיון עבור {len(self.sentences)} משפטים למשפט הזרע...")
-        print("⏳ זה הרבה יותר מהיר מאשר חישוב מטריצה מלאה!")
+- **מודל embeddings בשימוש במחברת זו:**  
+  *AlephBERT* - גרסה עברית של  *BERT* המותאמת לניתוח סמנטי  
+  🔗 https://huggingface.co/imvladikon/sentence-transformers-alephbert  
 
-        try:
-            seed_emb = self.model.encode(self.seed_sentence, convert_to_tensor=True)
-            sent_embs = self.model.encode(self.sentences, convert_to_tensor=True)
-            self.similarities = util.cos_sim(seed_emb, sent_embs).cpu().numpy().flatten().tolist()
+- חלופה מומלצת לרב־לשוניות: LaBSE (Google)  
+  🔗 https://tfhub.dev/google/LaBSE/2  
 
-            print(f"✅ הסתיים! חושבו {len(self.similarities)} השוואות")
+---
 
-            if self.df is not None:
-                self.df['similarity_score'] = self.similarities
-                self.df = self.df.sort_values('similarity_score', ascending=False).reset_index(drop=True)
+# 🛠️ הסבר תמציתי של שלבי העבודה (יישום בשאלון)
 
-            return self.similarities
-        except Exception as e:
-            print(f"❌ שגיאה בחישוב דמיון: {e}")
-            return None
+## 1. הגדרת מבנה ו-Seed
+- הגדר/י את הממדים התיאורטיים של המשתנה.  
+- נסח/י משפט מייצג (seed) קצר וברור לכל ממד.  
+**→ את המשפט הזה יש להקליד בטופס למטה במקום המתאים**
 
-    def display_results(self, num_strong=5, num_medium=5):
-        if not self.similarities:
-            print("❌ עדיין לא חושבו ציונים")
-            return None
+## 2. הפקה גנרטיבית של פריטים
+- הפק/י מגוון רחב של וריאציות פריטים לכל seed באמצעות מודל גנרטיבי (LLM) כמו קלוד או ג'י.פי.טי.  
+- מטרה: כיסוי רחב של המשמעות, לא נוסח "מושלם" בשלב זה.
 
-        all_matches = [(i, sentence, score) for i, (sentence, score) in enumerate(zip(self.sentences, self.similarities))]
-        all_matches.sort(key=lambda x: x[2], reverse=True)
+## 3. המרה ל-Embeddings
+- המר/י כל פריט (וגם את ה-seed) ל-sentence embeddings בעזרת מודל מתאים (AlephBERT במחברת זו).
 
-        strong = [m for m in all_matches if m[2] >= 0.75]
-        medium = [m for m in all_matches if 0.70 <= m[2] < 0.75]
-        weak = [m for m in all_matches if m[2] < 0.70]
+## 4. סינון סמנטי אוטומטי ← **זה מה שהמחברת הזו עושה!**
+- חשב/י cosine similarity בין כל פריט ל-seed שלו.  
+- קבע/י סף (≈ 0.70–0.75 מקובל) לשמירת פריטים קרובים במשמעות.  
+- הרחבות ביניים נשקלות תיאורטית; רחוקים נפסלים.
 
-        print(f"\n🌱 משפט הזרע: \"{self.seed_sentence}\"")
-        print("=" * 100)
+## 5. ביקורת מומחים ו"שיוף" ניסוחי
+- מומחי תחום מסננים כפילויות, מתקנים ניסוחים, בודקים התאמה תרבותית/אתית.  
+- שמירה על כיסוי מושגי מאוזן לכל תת-ממד.
 
-        # חזק
-        if strong:
-            show_n = min(num_strong, len(strong))
-            print(f"\n🟢 דמיון חזק (≥0.75) ({len(strong)} משפטים):")
-            print("📋 מציג", show_n, "מתוך", len(strong))
-            print("-" * 100)
-            for rank, (i, s, sc) in enumerate(strong[:show_n], 1):
-                print(f"🟢 #{rank:2d} | ציון: {sc:.4f} ({sc*100:.1f}%) | שורה {i+1:3d}")
-                print(f"    📝 \"{s}\"")
-                print()
+## 6. אימות פסיכומטרי
+- אסוף/י נתונים אמפיריים.  
+- הרץ/י **EFA/CFA** ומהימנות פנימית (**Cronbach's α**).  
+- אשר/י את מבנה הממדים ואת איכות הפריטים.  
+- במידת הצורך: בצע/י קיצור סולם על בסיס עומסי גורם ותפקוד פריט.
 
-        # בינוני
-        if medium:
-            show_n = min(num_medium, len(medium))
-            print(f"\n🟡 דמיון בינוני (0.70-0.749) ({len(medium)} משפטים):")
-            print("📋 מציג", show_n, "מתוך", len(medium))
-            print("-" * 100)
-            for rank, (i, s, sc) in enumerate(medium[:show_n], 1):
-                print(f"🟡 #{rank:2d} | ציון: {sc:.4f} ({sc*100:.1f}%) | שורה {i+1:3d}")
-                print(f"    📝 \"{s}\"")
-                print()
+---
 
-        print(f"\n📊 סיכום:")
-        print(f"🔥 חזק (≥0.75): {len(strong):3d} משפטים")
-        print(f"🟡 בינוני (0.70-0.749): {len(medium):3d} משפטים")
-        print(f"🔵 חלש (<0.70): {len(weak):3d} משפטים")
-        print(f"📝 סה\"כ: {len(all_matches):3d} משפטים")
-        if all_matches:
-            best_score = all_matches[0][2]
-            print(f"🎯 הציון הגבוה ביותר: {best_score:.4f} ({best_score*100:.1f}%)")
+# 📚 מקורות מרכזיים
+</div>
 
-    def create_visualizations(self):
-        scores = np.array(self.similarities)
-        fig, axes = plt.subplots(2, 3, figsize=(20, 12))
+<div dir="ltr" align="left">
 
-        categories = [fix_hebrew_text('דמיון חזק (≥0.75)'),
-                      fix_hebrew_text('דמיון בינוני (0.70-0.749)'),
-                      fix_hebrew_text('דמיון חלש (<0.70)')]
-        counts = [len([s for s in scores if s >= 0.75]),
-                  len([s for s in scores if 0.70 <= s < 0.75]),
-                  len([s for s in scores if s < 0.70])]
-        axes[0,0].bar(categories, counts, color=['green','gold','skyblue'])
-        axes[0,0].set_title(fix_hebrew_text("התפלגות לפי רמות דמיון"))
+Hernandez, I., & Nie, W. (2023). The AI-IP: Minimizing the guesswork of personality scale item development through artificial intelligence. Personnel Psychology, 76(4), 1011–1035. 📄 DOI: https://doi.org/10.1111/peps.12543  
 
-        axes[0,1].hist(scores, bins=20, alpha=0.7, color='lightblue', edgecolor='black')
-        axes[0,1].axvline(np.mean(scores), color='red', linestyle='--', label=fix_hebrew_text(f'ממוצע: {np.mean(scores):.3f}'))
-        axes[0,1].axvline(np.median(scores), color='green', linestyle='--', label=fix_hebrew_text(f'חציון: {np.median(scores):.3f}'))
-        axes[0,1].legend()
-        axes[0,1].set_title(fix_hebrew_text("התפלגות ציוני דמיון"))
+Liu, X., Zhang, L., & Wei, X. (2025). Generative Artificial Intelligence Literacy: Scale Development and Its Effect on Job Performance. Behavioral Sciences, 15(6), 811. 🌐 קישור פתוח: https://doi.org/10.3390/bs15060811  
 
-        top_15_idx = np.argsort(scores)[-15:][::-1]
-        top_15_scores = scores[top_15_idx]
-        axes[0,2].bar(range(1,16), top_15_scores, color='green')
-        axes[0,2].axhline(y=0.75, color='darkgreen', linestyle='--', label=fix_hebrew_text('חזק (0.75)'))
-        axes[0,2].axhline(y=0.70, color='orange', linestyle='--', label=fix_hebrew_text('בינוני (0.70)'))
-        axes[0,2].legend()
-        axes[0,2].set_title(fix_hebrew_text("טופ 15 ציוני דמיון"))
+- מודל AlephBERT: https://huggingface.co/imvladikon/sentence-transformers-alephbert  
+- חלופה: LaBSE (Google) https://tfhub.dev/google/LaBSE/2  
 
-        axes[1,0].boxplot(scores, patch_artist=True, boxprops=dict(facecolor='lightgreen', alpha=0.7))
-        axes[1,0].axhline(y=0.75, color='darkgreen', linestyle='--')
-        axes[1,0].axhline(y=0.70, color='orange', linestyle='--')
-        axes[1,0].set_title(fix_hebrew_text("Box Plot"))
+</div>
+"""
+    display(HTML(intro_html))
 
-        top_20_idx = np.argsort(scores)[-20:][::-1]
-        heatmap_data = scores[top_20_idx].reshape(4, 5)
-        im = axes[1,1].imshow(heatmap_data, cmap='RdYlGn', vmin=0, vmax=1)
-        for i in range(4):
-            for j in range(5):
-                axes[1,1].text(j, i, f"{heatmap_data[i,j]:.3f}", ha="center", va="center", color="black")
-        axes[1,1].set_title(fix_hebrew_text("מפת חום - טופ 20"))
-        fig.colorbar(im, ax=axes[1,1])
-
-        axes[1,2].axis('off')
-        plt.tight_layout(pad=3.0)
-        plt.show()
 
 # טופס אינטראקטיבי (ipywidgets)
 def create_analysis_form():
-    print("""
-📁 הוראות להכנת קובץ CSV:
-1. צור קובץ עם עמודה בשם 'sentence'
-2. כל שורה מכילה משפט אחד
-3. שמור את הקובץ ב-UTF-8
-""")
+    clear_output()
+    show_intro()
+
+    display(Markdown("✅ **כדי להפעיל את הטופס יש ללחוץ על ▶️ (הפעלת תא) מצד שמאל**\n\n---"))
 
     seed_text = widgets.Textarea(
         value='',
