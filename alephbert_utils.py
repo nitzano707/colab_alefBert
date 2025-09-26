@@ -16,6 +16,10 @@ from sentence_transformers import SentenceTransformer, util
 import bidi.algorithm
 from arabic_reshaper import reshape
 
+from google.colab import files
+import openpyxl
+from openpyxl.styles import Font
+
 warnings.filterwarnings('ignore')
 
 # פונקציה לתיקון עברית (בשביל גרפים בלבד)
@@ -277,9 +281,33 @@ def create_analysis_form():
         def export_to_excel(btn):
             df_out = pd.DataFrame([(s, sc) for (_, s, sc) in all_matches],
                                   columns=["היגד", "ציון דמיון"])
-            df_out.to_excel("תוצאות_ניתוח.xlsx", index=False)
-            with output_area:
-                print("📂 קובץ 'תוצאות_ניתוח.xlsx' נוצר בתיקייה הנוכחית.")
+
+            # יצירת קובץ אקסל חדש עם openpyxl
+            filename = "תוצאות_ניתוח.xlsx"
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "תוצאות"
+
+            # שורה 1: משפט הזרע
+            ws.append([f"🌱 משפט הזרע: {seed_text.value.strip()}"])
+            ws["A1"].font = Font(bold=True)
+
+            # שורה 2: נוצר ע״י COLAB
+            notebook_link = "https://colab.research.google.com/drive/your_notebook_id"  # תעדכן את הלינק שלך
+            ws.append([f"📓 נוצר ע״י מחברת COLAB: {notebook_link}"])
+
+            # שורה ריקה
+            ws.append([])
+
+            # כותרות הטבלה
+            ws.append(["היגד", "ציון דמיון"])
+            for row in df_out.itertuples(index=False):
+                ws.append(row)
+
+            wb.save(filename)
+
+            # הורדה למחשב המקומי
+            files.download(filename)
 
         export_button.on_click(export_to_excel)
         export_button.disabled = False
@@ -292,3 +320,4 @@ def create_analysis_form():
         num_strong, num_medium, analyze_button, export_button, output_area
     ])
     display(form)
+
